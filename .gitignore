@@ -1,0 +1,7 @@
+# build artefacts
+bin/
+obj/
+packages/
+.vs/
+*.user
+*.suo
