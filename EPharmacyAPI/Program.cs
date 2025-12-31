@@ -55,6 +55,8 @@ builder.Services.AddCommonPersistence(builder.Configuration);
 // register services
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IngredientService>();
+builder.Services.AddScoped<CategoryService>();
 
 // configure JWT
 var jwt = builder.Configuration.GetSection("Jwt");
