@@ -35,6 +35,15 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(p => p.BrandId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        // Configure long text columns for descriptions
+        modelBuilder.Entity<Product>()
+            .Property(p => p.Description)
+            .HasColumnType("nvarchar(max)");
+
+        modelBuilder.Entity<Ingredient>()
+            .Property(i => i.Description)
+            .HasColumnType("nvarchar(max)");
+
         modelBuilder.Entity<Category>()
             .HasOne(c => c.ParentCategory)
             .WithMany(c => c.Subcategories)

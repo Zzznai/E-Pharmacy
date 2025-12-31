@@ -34,16 +34,34 @@ public class ProductService : BaseService<Product>
 
     public void SaveWithDetails(Product product, IEnumerable<int> categoryIds, IEnumerable<ProductIngredient> ingredients)
     {
-        Context.Entry(product).Collection(p => p.Categories).Load();
-        Context.Entry(product).Collection(p => p.ProductIngredients).Load();
-        Context.Entry(product).Reference(p => p.Brand).Load();
+        if (product.Id > 0)
+        {
+            // For existing products, load collections to clear/update
+            Context.Entry(product).Collection(p => p.Categories).Load();
+            Context.Entry(product).Collection(p => p.ProductIngredients).Load();
+            
+            product.Categories.Clear();
+            Context.ProductIngredients.RemoveRange(product.ProductIngredients);
+        }
 
-        product.Categories.Clear();
-        var categories = Context.Categories.Where(c => categoryIds.Contains(c.Id)).ToList();
+        var categoryIdsList = categoryIds.ToList();
+
+        // If product is a prescription drug, ensure it's assigned to "Prescription drugs" category
+        if (product.IsPrescriptionRequired)
+        {
+            var prescriptionCategory = Context.Categories.FirstOrDefault(c => c.Name == "Prescription drugs");
+            if (prescriptionCategory != null && !categoryIdsList.Contains(prescriptionCategory.Id))
+            {
+                categoryIdsList.Add(prescriptionCategory.Id);
+            }
+            // Reset quantity for prescription products
+            product.AvailableQuantity = 0;
+        }
+
+        var categories = Context.Categories.Where(c => categoryIdsList.Contains(c.Id)).ToList();
         foreach (var cat in categories)
             product.Categories.Add(cat);
 
-        Context.ProductIngredients.RemoveRange(product.ProductIngredients);
         foreach (var pi in ingredients)
             Context.ProductIngredients.Add(pi);
 

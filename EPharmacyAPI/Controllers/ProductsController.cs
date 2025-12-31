@@ -72,7 +72,17 @@ public class ProductsController : ControllerBase
     public IActionResult Create([FromBody] ProductCreateDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
-        if (dto.AvailableQuantity < 0) return BadRequest("Available quantity cannot be negative.");
+        if (dto.Price <= 0) return BadRequest("Price must be greater than zero.");
+        
+        // Validate prescription products
+        if (dto.IsPrescriptionRequired)
+        {
+            if (dto.AvailableQuantity != 0) return BadRequest("Prescription products cannot have available quantity.");
+        }
+        else
+        {
+            if (dto.AvailableQuantity < 0) return BadRequest("Available quantity cannot be negative.");
+        }
 
         var categoryIds = dto.CategoryIds ?? new List<int>();
         var ingredientDtos = dto.Ingredients ?? new List<IngredientLineDto>();
@@ -137,6 +147,17 @@ public class ProductsController : ControllerBase
         var product = _productService.GetWithDetails(id);
         if (product == null) return NotFound();
 
+        // Validate prescription products
+        if (dto.IsPrescriptionRequired)
+        {
+            if (dto.AvailableQuantity != 0) return BadRequest("Prescription products cannot have available quantity.");
+        }
+        else
+        {
+            if (dto.AvailableQuantity < 0) return BadRequest("Available quantity cannot be negative.");
+        }
+        if (dto.Price <= 0) return BadRequest("Price must be greater than zero.");
+
         product.Name = dto.Name;
         product.PhotoUrl = dto.PhotoUrl;
         product.Price = dto.Price;
@@ -190,10 +211,13 @@ public class ProductsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public IActionResult SetQuantity(int id, [FromBody] int availableQuantity)
     {
-        if (availableQuantity < 0) return BadRequest("Quantity cannot be negative.");
-
         var product = _productService.GetById(id);
         if (product == null) return NotFound();
+        
+        if (product.IsPrescriptionRequired) 
+            return BadRequest("Cannot set quantity for prescription products.");
+        
+        if (availableQuantity < 0) return BadRequest("Quantity cannot be negative.");
 
         product.AvailableQuantity = availableQuantity;
         _productService.Save(product);

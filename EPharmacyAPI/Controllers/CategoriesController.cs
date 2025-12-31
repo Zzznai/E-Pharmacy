@@ -18,8 +18,8 @@ public class CategoriesController : ControllerBase
     }
 
     public record CategoryResponse(int Id, string Name, int? ParentCategoryId, List<int> SubcategoryIds);
-    public record CategoryCreateDto(string Name, int? ParentCategoryId);
-    public record CategoryUpdateDto(string Name, int? ParentCategoryId);
+    public record CategoryCreateDto(string Name, int? ParentCategoryId = null);
+    public record CategoryUpdateDto(string Name, int? ParentCategoryId = null);
 
     [HttpGet]
     [AllowAnonymous]
