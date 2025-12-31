@@ -1,5 +1,6 @@
 using FluentValidation;
-using EPharmacyAPI.Dtos;
+using EPharmacyAPI.Dtos.Users;
+using EPharmacyAPI.Dtos.Auth;
 
 namespace EPharmacyAPI.Validators;
 

@@ -1,7 +1,7 @@
 using System.Linq;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
-using EPharmacyAPI.Dtos;
+using EPharmacyAPI.Dtos.Categories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

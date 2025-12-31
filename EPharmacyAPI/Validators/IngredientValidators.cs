@@ -1,5 +1,5 @@
 using FluentValidation;
-using EPharmacyAPI.Dtos;
+using EPharmacyAPI.Dtos.Ingredients;
 
 namespace EPharmacyAPI.Validators;
 
