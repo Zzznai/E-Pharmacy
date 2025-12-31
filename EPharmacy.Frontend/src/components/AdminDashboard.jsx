@@ -5,7 +5,7 @@ import './AdminDashboard.css';
 
 function AdminDashboard() {
   const navigate = useNavigate();
-  const [userInfo, setUserInfo] = useState(null);
+  const [userInfo] = useState(() => authService.getUserInfo());
 
   useEffect(() => {
     // Check if user is authenticated
@@ -14,16 +14,12 @@ function AdminDashboard() {
       return;
     }
 
-    // Get user info from token
-    const info = authService.getUserInfo();
-    setUserInfo(info);
-
     // Check if user is admin
-    if (info?.role !== 'Administrator') {
+    if (userInfo?.role !== 'Administrator') {
       alert('Access denied. Admin privileges required.');
       navigate('/');
     }
-  }, [navigate]);
+  }, [navigate, userInfo]);
 
   const handleLogout = () => {
     authService.logout();
@@ -31,7 +27,8 @@ function AdminDashboard() {
   };
 
   if (!userInfo) {
-    return <div>Loading...</div>;
+    navigate('/');
+    return null;
   }
 
   return (
@@ -48,7 +45,7 @@ function AdminDashboard() {
 
       <div className="admin-content">
         <div className="dashboard-grid">
-          <div className="dashboard-card" onClick={() => {}}>
+          <div className="dashboard-card" onClick={() => navigate('/users')}>
             <div className="card-icon-wrapper">
               <div className="icon-users">
                 <div className="id-card">
@@ -60,7 +57,7 @@ function AdminDashboard() {
             </div>
             <h3>Users</h3>
             <p>Manage user accounts and permissions</p>
-            <button className="card-button">View Users</button>
+            <button className="card-button" onClick={(e) => { e.stopPropagation(); navigate('/users'); }}>View Users</button>
           </div>
 
           <div className="dashboard-card" onClick={() => {}}>
@@ -152,7 +149,7 @@ function AdminDashboard() {
             <button className="card-button">View Ingredients</button>
           </div>
 
-          <div className="dashboard-card" onClick={() => {}}>
+          <div className="dashboard-card" onClick={() => navigate('/brands')}>
             <div className="card-icon-wrapper">
               <div className="icon-brands">
                 <div className="brand-badge">
@@ -169,7 +166,7 @@ function AdminDashboard() {
             </div>
             <h3>Brands</h3>
             <p>Manage product brands</p>
-            <button className="card-button">View Brands</button>
+            <button className="card-button" onClick={(e) => { e.stopPropagation(); navigate('/brands'); }}>View Brands</button>
           </div>
         </div>
       </div>

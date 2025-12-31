@@ -21,3 +21,35 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/* ===== CUSTOM SCROLLBARS ===== */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(167, 139, 250, 0.5) rgba(30, 17, 51, 0.3);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, rgba(30, 17, 51, 0.4) 0%, rgba(45, 27, 78, 0.4) 100%);
+  border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 50%, #6d28d9 100%);
+  border-radius: 10px;
+  border: 2px solid rgba(30, 17, 51, 0.4);
+  transition: all 0.3s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #c4b5fd 0%, #a78bfa 50%, #7c3aed 100%);
+  box-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+}
+
+*::-webkit-scrollbar-corner {
+  background: rgba(30, 17, 51, 0.4);
+}
