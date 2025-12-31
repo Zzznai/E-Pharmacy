@@ -64,9 +64,10 @@ export const productService = {
       });
     }
     
-    if (productData.ingredients && productData.ingredients.length > 0) {
-      formData.append('IngredientsJson', JSON.stringify(productData.ingredients));
-    }
+    // Always send IngredientsJson, even if empty array
+    const ingredientsJson = JSON.stringify(productData.ingredients || []);
+    console.log('Sending IngredientsJson:', ingredientsJson);
+    formData.append('IngredientsJson', ingredientsJson);
     
     if (imageFile) {
       formData.append('Image', imageFile);
@@ -105,9 +106,10 @@ export const productService = {
       });
     }
     
-    if (productData.ingredients && productData.ingredients.length > 0) {
-      formData.append('IngredientsJson', JSON.stringify(productData.ingredients));
-    }
+    // Always send IngredientsJson, even if empty array
+    const ingredientsJson = JSON.stringify(productData.ingredients || []);
+    console.log('Update - Sending IngredientsJson:', ingredientsJson);
+    formData.append('IngredientsJson', ingredientsJson);
     
     if (imageFile) {
       formData.append('Image', imageFile);

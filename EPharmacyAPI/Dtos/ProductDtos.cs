@@ -1,10 +1,45 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 
 namespace EPharmacyAPI.Dtos;
 
-public record IngredientLineDto(int IngredientId, decimal Amount, string Unit);
-public record IngredientLineResponseDto(int IngredientId, string Name, decimal Amount, string Unit);
+public class IngredientLineDto
+{
+    [JsonPropertyName("ingredientId")]
+    public int IngredientId { get; set; }
+    
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+    
+    [JsonPropertyName("unit")]
+    public string Unit { get; set; } = string.Empty;
+}
+
+public class IngredientLineResponseDto
+{
+    [JsonPropertyName("ingredientId")]
+    public int IngredientId { get; set; }
+    
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+    
+    [JsonPropertyName("amount")]
+    public decimal Amount { get; set; }
+    
+    [JsonPropertyName("unit")]
+    public string Unit { get; set; } = string.Empty;
+    
+    public IngredientLineResponseDto() { }
+    
+    public IngredientLineResponseDto(int ingredientId, string name, decimal amount, string unit)
+    {
+        IngredientId = ingredientId;
+        Name = name;
+        Amount = amount;
+        Unit = unit;
+    }
+}
 
 public record ProductResponseDto(int Id, string Name, string PhotoUrl, decimal Price, int AvailableQuantity, string Description, bool IsPrescriptionRequired, int? BrandId, string? BrandName, List<int> CategoryIds, List<IngredientLineResponseDto> Ingredients);
 public record ProductCreateDto(string Name, string PhotoUrl, decimal Price, int AvailableQuantity, string Description, bool IsPrescriptionRequired, int? BrandId, List<int>? CategoryIds, List<IngredientLineDto>? Ingredients);

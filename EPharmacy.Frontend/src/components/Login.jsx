@@ -22,7 +22,7 @@ function Login() {
       if (response.role === 'Administrator') {
         navigate('/dashboard');
       } else {
-        navigate('/shop');
+        navigate('/');
       }
     } catch (err) {
       setError(err.message || 'Failed to login. Please check your credentials.');

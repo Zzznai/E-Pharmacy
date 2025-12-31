@@ -42,6 +42,7 @@ public class ProductService : BaseService<Product>
             
             product.Categories.Clear();
             Context.ProductIngredients.RemoveRange(product.ProductIngredients);
+            product.ProductIngredients.Clear();
         }
 
         var categoryIdsList = categoryIds.ToList();
@@ -62,8 +63,12 @@ public class ProductService : BaseService<Product>
         foreach (var cat in categories)
             product.Categories.Add(cat);
 
-        foreach (var pi in ingredients)
-            Context.ProductIngredients.Add(pi);
+        // Add ingredients to the product's collection (EF will handle the FK)
+        var ingredientsList = ingredients.ToList();
+        foreach (var pi in ingredientsList)
+        {
+            product.ProductIngredients.Add(pi);
+        }
 
         if (product.Id > 0)
             Context.Products.Update(product);

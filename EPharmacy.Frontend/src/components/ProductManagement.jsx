@@ -162,6 +162,14 @@ function ProductManagement() {
     setImagePreview(product.photoUrl);
     setRemoveImage(false);
     setFormError('');
+    // Reset ingredient input fields
+    setSelectedIngredientId('');
+    setSelectedIngredientName('');
+    setIngredientSearch('');
+    setIngredientAmount('');
+    setIngredientUnit('mg');
+    setShowIngredientDropdown(false);
+    setCategorySearch('');
     setShowEditModal(true);
   };
 
@@ -300,6 +308,7 @@ function ProductManagement() {
 
     try {
       setSubmitting(true);
+      console.log('Submitting product with ingredients:', formData.ingredients);
       await productService.create({
         name: formData.name,
         price: parseFloat(formData.price),
@@ -334,6 +343,7 @@ function ProductManagement() {
 
     try {
       setSubmitting(true);
+      console.log('Updating product with ingredients:', formData.ingredients);
       await productService.update(selectedProduct.id, {
         name: formData.name,
         price: parseFloat(formData.price),
@@ -500,7 +510,7 @@ function ProductManagement() {
                 </div>
               )}
               {product.isPrescriptionRequired && (
-                <div className="prescription-badge">Rx</div>
+                <div className="prescription-badge">Pr</div>
               )}
             </div>
             <div className="product-info">

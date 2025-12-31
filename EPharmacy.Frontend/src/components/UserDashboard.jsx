@@ -4,6 +4,7 @@ import { productService } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import { orderService } from '../services/orderService';
 import { userService } from '../services/userService';
+import { ingredientService } from '../services/ingredientService';
 import './UserDashboard.css';
 
 // Base color palette for categories (same as CategoryManagement)
@@ -53,6 +54,7 @@ function UserDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState([]);
   
   // Basket
   const [basket, setBasket] = useState([]);
@@ -65,6 +67,13 @@ function UserDashboard() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [userOrders, setUserOrders] = useState([]);
   const [userInfo, setUserInfo] = useState(null);
+  
+  // Product Detail Modal
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  
+  // Ingredient Detail Modal
+  const [selectedIngredient, setSelectedIngredient] = useState(null);
+  const [loadingIngredient, setLoadingIngredient] = useState(false);
   
   // Forms
   const [profileForm, setProfileForm] = useState({ firstName: '', lastName: '' });
@@ -92,7 +101,8 @@ function UserDashboard() {
         productService.getAll(),
         categoryService.getAll()
       ]);
-      setProducts(productsData.filter(p => !p.isPrescriptionRequired));
+      // Show all products (including prescription-required ones)
+      setProducts(productsData);
       setCategories(categoriesData);
       
       // Get user info
@@ -127,12 +137,20 @@ function UserDashboard() {
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || product.categoryId === parseInt(selectedCategory);
+    const matchesCategory = !selectedCategory || product.categoryIds?.includes(parseInt(selectedCategory));
     return matchesSearch && matchesCategory;
   });
 
   const addToBasket = (product) => {
     const existing = basket.find(item => item.productId === product.id);
+    const currentQty = existing ? existing.quantity : 0;
+    
+    // Check if we have enough stock
+    if (currentQty >= product.availableQuantity) {
+      showToast(`Sorry, only ${product.availableQuantity} available in stock!`, 'error');
+      return;
+    }
+    
     let newBasket;
     
     if (existing) {
@@ -147,7 +165,8 @@ function UserDashboard() {
         name: product.name,
         price: product.price,
         photoUrl: product.photoUrl,
-        quantity: 1
+        quantity: 1,
+        availableQuantity: product.availableQuantity
       }];
     }
     
@@ -157,12 +176,25 @@ function UserDashboard() {
   };
 
   const updateQuantity = (productId, delta) => {
-    const newBasket = basket.map(item => {
-      if (item.productId === productId) {
-        const newQty = item.quantity + delta;
-        return newQty > 0 ? { ...item, quantity: newQty } : null;
+    const item = basket.find(i => i.productId === productId);
+    if (!item) return;
+    
+    const newQty = item.quantity + delta;
+    
+    // Check stock limit when increasing
+    if (delta > 0) {
+      const product = products.find(p => p.id === productId);
+      if (product && newQty > product.availableQuantity) {
+        showToast(`Sorry, only ${product.availableQuantity} available in stock!`, 'error');
+        return;
       }
-      return item;
+    }
+    
+    const newBasket = basket.map(basketItem => {
+      if (basketItem.productId === productId) {
+        return newQty > 0 ? { ...basketItem, quantity: newQty } : null;
+      }
+      return basketItem;
     }).filter(Boolean);
     
     setBasket(newBasket);
@@ -183,8 +215,8 @@ function UserDashboard() {
   const basketTotal = basket.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const basketCount = basket.reduce((sum, item) => sum + item.quantity, 0);
 
-  const showToast = (text) => {
-    setMessage({ type: 'success', text });
+  const showToast = (text, type = 'success') => {
+    setMessage({ type, text });
     setTimeout(() => setMessage({ type: '', text: '' }), 3000);
   };
 
@@ -261,6 +293,10 @@ function UserDashboard() {
       setShowBasket(false);
       setDeliveryForm({ address: '', city: '', province: '', postalCode: '', phoneNumber: '' });
       showToast('Order placed successfully! 🎉');
+      
+      // Refresh products to get updated stock quantities
+      const updatedProducts = await productService.getAll();
+      setProducts(updatedProducts);
     } catch (err) {
       setMessage({ type: 'error', text: err.message });
     } finally {
@@ -274,6 +310,9 @@ function UserDashboard() {
     localStorage.removeItem('userRole');
     localStorage.removeItem('userId');
     localStorage.removeItem('basket');
+    setUserInfo(null);
+    setBasket([]);
+    setShowProfile(false);
     navigate('/');
   };
 
@@ -321,6 +360,30 @@ function UserDashboard() {
   };
 
   const flatCategories = flattenTree(categoryTree);
+
+  // Get category hierarchy path (e.g., "Parent > Child > Grandchild")
+  const getCategoryPath = (categoryId) => {
+    const path = [];
+    let current = categories.find(c => c.id === parseInt(categoryId));
+    while (current) {
+      path.unshift(current.name);
+      current = categories.find(c => c.id === current.parentCategoryId);
+    }
+    return path;
+  };
+
+  // Handle ingredient click to show details
+  const handleIngredientClick = async (ingredientId) => {
+    try {
+      setLoadingIngredient(true);
+      const ingredient = await ingredientService.getById(ingredientId);
+      setSelectedIngredient(ingredient);
+    } catch (err) {
+      showToast('Failed to load ingredient details', 'error');
+    } finally {
+      setLoadingIngredient(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -383,17 +446,81 @@ function UserDashboard() {
                   <span className="category-dot" style={{ background: '#a78bfa' }}></span>
                   All Categories
                 </div>
-                {flatCategories.map(cat => (
-                  <div
-                    key={cat.id}
-                    className={`dropdown-item ${cat.depth === 1 ? 'child' : cat.depth >= 2 ? 'grandchild' : ''} ${selectedCategory === cat.id.toString() ? 'active' : ''}`}
-                    onClick={() => { setSelectedCategory(cat.id.toString()); setShowCategoryDropdown(false); }}
-                  >
-                    <span 
-                      className="category-dot" 
-                      style={{ background: getCategoryColor(cat, categories) }}
-                    ></span>
-                    {cat.name}
+                {categoryTree.map(parentCat => (
+                  <div key={parentCat.id}>
+                    <div
+                      className={`dropdown-item depth-0 ${selectedCategory === parentCat.id.toString() ? 'active' : ''} ${parentCat.children?.length > 0 ? 'has-children' : ''}`}
+                    >
+                      <span 
+                        className="category-dot" 
+                        style={{ background: getCategoryColor(parentCat, categories) }}
+                        onClick={() => { setSelectedCategory(parentCat.id.toString()); setShowCategoryDropdown(false); }}
+                      ></span>
+                      <span 
+                        className="category-name"
+                        onClick={() => { setSelectedCategory(parentCat.id.toString()); setShowCategoryDropdown(false); }}
+                      >
+                        {parentCat.name}
+                      </span>
+                      {parentCat.children?.length > 0 && (
+                        <span 
+                          className={`expand-arrow ${expandedCategories.includes(parentCat.id) ? 'expanded' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedCategories(prev => 
+                              prev.includes(parentCat.id) 
+                                ? prev.filter(id => id !== parentCat.id)
+                                : [...prev, parentCat.id]
+                            );
+                          }}
+                        >▶</span>
+                      )}
+                    </div>
+                    {expandedCategories.includes(parentCat.id) && parentCat.children?.map(childCat => (
+                      <div key={childCat.id}>
+                        <div
+                          className={`dropdown-item depth-1 ${selectedCategory === childCat.id.toString() ? 'active' : ''} ${childCat.children?.length > 0 ? 'has-children' : ''}`}
+                        >
+                          <span 
+                            className="category-dot" 
+                            style={{ background: getCategoryColor(childCat, categories) }}
+                            onClick={() => { setSelectedCategory(childCat.id.toString()); setShowCategoryDropdown(false); }}
+                          ></span>
+                          <span 
+                            className="category-name"
+                            onClick={() => { setSelectedCategory(childCat.id.toString()); setShowCategoryDropdown(false); }}
+                          >
+                            {childCat.name}
+                          </span>
+                          {childCat.children?.length > 0 && (
+                            <span 
+                              className={`expand-arrow ${expandedCategories.includes(childCat.id) ? 'expanded' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedCategories(prev => 
+                                  prev.includes(childCat.id) 
+                                    ? prev.filter(id => id !== childCat.id)
+                                    : [...prev, childCat.id]
+                                );
+                              }}
+                            >▶</span>
+                          )}
+                        </div>
+                        {expandedCategories.includes(childCat.id) && childCat.children?.map(grandchildCat => (
+                          <div
+                            key={grandchildCat.id}
+                            className={`dropdown-item depth-2 ${selectedCategory === grandchildCat.id.toString() ? 'active' : ''}`}
+                            onClick={() => { setSelectedCategory(grandchildCat.id.toString()); setShowCategoryDropdown(false); }}
+                          >
+                            <span 
+                              className="category-dot" 
+                              style={{ background: getCategoryColor(grandchildCat, categories) }}
+                            ></span>
+                            {grandchildCat.name}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -402,44 +529,85 @@ function UserDashboard() {
         </div>
         
         <div className="header-right">
-          <button className="icon-btn basket-btn" onClick={() => setShowBasket(true)}>
-            <span className="cart-icon"></span>
-            {basketCount > 0 && <span className="badge">{basketCount}</span>}
-          </button>
-          <button className="icon-btn profile-btn" onClick={() => { setShowProfile(true); fetchUserOrders(); }}>
-            <span className="profile-icon"></span>
-          </button>
+          {userInfo && (
+            <button className="icon-btn basket-btn" onClick={() => setShowBasket(true)}>
+              <span className="cart-icon"></span>
+              {basketCount > 0 && <span className="badge">{basketCount}</span>}
+            </button>
+          )}
+          
+          {userInfo ? (
+            <button className="icon-btn profile-btn" onClick={() => { setShowProfile(true); fetchUserOrders(); }}>
+              <span className="profile-icon"></span>
+            </button>
+          ) : (
+            <button className="login-btn" onClick={() => navigate('/login')}>
+              Login
+            </button>
+          )}
         </div>
       </header>
+
+      {/* Category Banner - Show when category is selected */}
+      {selectedCategory && (
+        <div className="category-banner">
+          <div className="category-path">
+            {getCategoryPath(selectedCategory).map((name, index, arr) => (
+              <span key={index}>
+                {index > 0 && <span className="path-separator">›</span>}
+                <span className={index === arr.length - 1 ? 'current-category' : 'parent-category'}>{name}</span>
+              </span>
+            ))}
+          </div>
+          <button 
+            className="clear-filter-btn"
+            onClick={() => setSelectedCategory('')}
+          >
+            ✕ Clear Filter
+          </button>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="dashboard-main">
         <div className="products-header">
-          <h2>Available Products</h2>
+          <h2>{selectedCategory ? `Products in ${categories.find(c => c.id === parseInt(selectedCategory))?.name}` : 'Available Products'}</h2>
           <span className="product-count">{filteredProducts.length} products found</span>
         </div>
         
         <div className="products-grid">
           {filteredProducts.map(product => (
-            <div key={product.id} className="product-card">
+            <div 
+              key={product.id} 
+              className={`product-card ${product.isPrescriptionRequired ? 'prescription-product' : ''} clickable`}
+              onClick={() => setSelectedProduct(product)}
+            >
               <div className="product-image">
                 {product.photoUrl ? (
                   <img src={product.photoUrl} alt={product.name} />
                 ) : (
                   <div className="no-image"><div className="pill-icon"></div></div>
                 )}
+                {product.isPrescriptionRequired && (
+                  <div className="prescription-badge">Pr</div>
+                )}
+                <div className="view-details-hint">Click for details</div>
               </div>
               <div className="product-info">
                 <h3 className="product-name">{product.name}</h3>
                 <p className="product-description">{product.description?.substring(0, 60)}...</p>
                 <div className="product-footer">
                   <span className="product-price">{formatCurrency(product.price)}</span>
-                  <button 
-                    className="add-to-cart-btn"
-                    onClick={() => addToBasket(product)}
-                  >
-                    + Add
-                  </button>
+                  {userInfo && (
+                    <button 
+                      className={`add-to-cart-btn ${product.isPrescriptionRequired ? 'disabled' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); addToBasket(product); }}
+                      disabled={product.isPrescriptionRequired}
+                      title={product.isPrescriptionRequired ? 'Prescription required - cannot order online' : 'Add to basket'}
+                    >
+                      {product.isPrescriptionRequired ? 'Pr Only' : '+ Add'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -453,6 +621,144 @@ function UserDashboard() {
           </div>
         )}
       </main>
+
+      {/* Product Detail Modal */}
+      {selectedProduct && (
+        <div className="modal-overlay" onClick={() => setSelectedProduct(null)}>
+          <div className="modal-content detail-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Product Details</h2>
+              <button className="modal-close" onClick={() => setSelectedProduct(null)}>×</button>
+            </div>
+            <div className="modal-body detail-body">
+              <div className="detail-image-section">
+                {selectedProduct.photoUrl ? (
+                  <img src={selectedProduct.photoUrl} alt={selectedProduct.name} className="detail-image" />
+                ) : (
+                  <div className="detail-no-image">
+                    <span>💊</span>
+                  </div>
+                )}
+              </div>
+              <div className="detail-info-section">
+                <h3 className="detail-name">{selectedProduct.name}</h3>
+                {selectedProduct.brandName && (
+                  <p className="detail-brand">Brand: {selectedProduct.brandName}</p>
+                )}
+                <div className="detail-price">{formatCurrency(selectedProduct.price)}</div>
+                
+                {selectedProduct.isPrescriptionRequired && (
+                  <div className="detail-prescription">
+                    <span className="rx-badge">Pr</span> Prescription Required
+                  </div>
+                )}
+
+                {selectedProduct.description && (
+                  <div className="detail-description">
+                    <h4>Description</h4>
+                    <p>{selectedProduct.description}</p>
+                  </div>
+                )}
+
+                {selectedProduct.categoryIds && selectedProduct.categoryIds.length > 0 && (
+                  <div className="detail-categories">
+                    <h4>Categories</h4>
+                    <div className="category-tags">
+                      {selectedProduct.categoryIds.map(catId => {
+                        const cat = categories.find(c => c.id === catId);
+                        return cat ? (
+                          <span key={catId} className="category-tag">{cat.name}</span>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {selectedProduct.ingredients && selectedProduct.ingredients.length > 0 && (
+                  <div className="detail-ingredients">
+                    <h4>Ingredients</h4>
+                    <div className="ingredient-tags">
+                      {selectedProduct.ingredients.map((ing, index) => (
+                        <span 
+                          key={index} 
+                          className="ingredient-detail-tag clickable"
+                          onClick={(e) => { e.stopPropagation(); handleIngredientClick(ing.ingredientId); }}
+                          title="Click to see ingredient details"
+                        >
+                          {ing.name} - {ing.amount} {ing.unit}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              {selectedProduct.isPrescriptionRequired ? (
+                <div className="prescription-notice">
+                  <span className="notice-icon">⚕️</span>
+                  This product requires a prescription. Please visit our pharmacy in person.
+                </div>
+              ) : userInfo ? (
+                <button 
+                  className="submit-btn"
+                  onClick={() => { addToBasket(selectedProduct); setSelectedProduct(null); }}
+                >
+                  + Add to Basket
+                </button>
+              ) : (
+                <div className="login-notice">
+                  <span className="notice-icon">🔐</span>
+                  Please log in to add items to your basket.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ingredient Detail Modal */}
+      {selectedIngredient && (
+        <div className="modal-overlay" onClick={() => setSelectedIngredient(null)}>
+          <div className="modal-content ingredient-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Ingredient Details</h2>
+              <button className="modal-close" onClick={() => setSelectedIngredient(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="ingredient-detail-content">
+                <div className="ingredient-icon">💊</div>
+                <h3 className="ingredient-name">{selectedIngredient.name}</h3>
+                
+                {selectedIngredient.isActiveSubstance && (
+                  <div className="active-substance-badge">
+                    <span className="badge-icon">⚡</span>
+                    Active Substance
+                  </div>
+                )}
+                
+                <div className="ingredient-description-section">
+                  <h4>Description</h4>
+                  <p>{selectedIngredient.description || 'No description available for this ingredient.'}</p>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={() => setSelectedIngredient(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading overlay for ingredient */}
+      {loadingIngredient && (
+        <div className="modal-overlay">
+          <div className="loading-ingredient">
+            <div className="loader"></div>
+            <p>Loading ingredient details...</p>
+          </div>
+        </div>
+      )}
 
       {/* Basket Sidebar */}
       {showBasket && (

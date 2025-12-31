@@ -155,6 +155,47 @@ public class OrdersController : ControllerBase
         if (!Enum.TryParse<OrderStatus>(dto.Status, true, out var newStatus))
             return BadRequest("Invalid status value.");
 
+        var oldStatus = order.Status;
+
+        // If cancelling an order that wasn't already cancelled, restore stock
+        if (newStatus == OrderStatus.Cancelled && oldStatus != OrderStatus.Cancelled)
+        {
+            if (order.OrderItems != null)
+            {
+                foreach (var item in order.OrderItems)
+                {
+                    // Use the Product already loaded with the order (tracked by EF)
+                    if (item.Product != null)
+                    {
+                        item.Product.AvailableQuantity += item.Quantity;
+                    }
+                }
+            }
+        }
+        // If un-cancelling an order (changing from cancelled to another status), reduce stock again
+        else if (oldStatus == OrderStatus.Cancelled && newStatus != OrderStatus.Cancelled)
+        {
+            if (order.OrderItems != null)
+            {
+                // First check if we have enough stock
+                foreach (var item in order.OrderItems)
+                {
+                    if (item.Product != null && item.Product.AvailableQuantity < item.Quantity)
+                    {
+                        return BadRequest($"Insufficient stock for {item.Product.Name} to restore this order. Available: {item.Product.AvailableQuantity}");
+                    }
+                }
+                // Then reduce stock
+                foreach (var item in order.OrderItems)
+                {
+                    if (item.Product != null)
+                    {
+                        item.Product.AvailableQuantity -= item.Quantity;
+                    }
+                }
+            }
+        }
+
         order.Status = newStatus;
         _orderService.Save(order);
 
@@ -189,6 +230,9 @@ public class OrdersController : ControllerBase
         var orderItems = new List<OrderItem>();
         decimal total = 0m;
 
+        // First pass: validate all items and check stock
+        var productsToUpdate = new List<(Product product, int quantity)>();
+        
         foreach (var item in dto.Items)
         {
             if (item.Quantity <= 0) return BadRequest("Quantity must be greater than zero.");
@@ -196,16 +240,28 @@ public class OrdersController : ControllerBase
             var product = _productService.GetById(item.ProductId);
             if (product == null) return NotFound($"Product {item.ProductId} not found.");
             if (product.IsPrescriptionRequired) return BadRequest("Prescription products cannot be ordered online.");
+            if (product.AvailableQuantity < item.Quantity) 
+                return BadRequest($"Insufficient stock for {product.Name}. Available: {product.AvailableQuantity}");
 
-            var lineTotal = product.Price * item.Quantity;
+            productsToUpdate.Add((product, item.Quantity));
+        }
+
+        // Second pass: create order items and reduce stock
+        foreach (var (product, quantity) in productsToUpdate)
+        {
+            var lineTotal = product.Price * quantity;
             total += lineTotal;
 
             orderItems.Add(new OrderItem
             {
                 ProductId = product.Id,
-                Quantity = item.Quantity,
+                Quantity = quantity,
                 UnitPrice = product.Price
             });
+
+            // Reduce available quantity
+            product.AvailableQuantity -= quantity;
+            _productService.Save(product);
         }
 
         var order = new Order

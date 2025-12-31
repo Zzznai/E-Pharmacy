@@ -372,13 +372,17 @@ function OrderManagement() {
                 return (
                   <tr key={order.id}>
                     <td className="order-id">#{order.id}</td>
-                    <td className="customer-info">
-                      <span className="customer-name">{order.userName}</span>
-                      <span className="customer-username">@{order.userUsername}</span>
+                    <td>
+                      <div className="customer-info">
+                        <span className="customer-name">{order.userName}</span>
+                        <span className="customer-username">@{order.userUsername}</span>
+                      </div>
                     </td>
-                    <td className="location-info">
-                      <span className="location-city">{order.city || 'N/A'}</span>
-                      <span className="location-province">{order.province || ''}</span>
+                    <td>
+                      <div className="location-info">
+                        <span className="location-city">{order.city || 'N/A'}</span>
+                        <span className="location-province">{order.province || ''}</span>
+                      </div>
                     </td>
                     <td className="order-date">{formatDate(order.orderDate)}</td>
                     <td className="item-count">{order.itemCount} item{order.itemCount !== 1 ? 's' : ''}</td>
@@ -395,16 +399,18 @@ function OrderManagement() {
                         {order.status}
                       </span>
                     </td>
-                    <td className="actions-cell">
-                      <button className="action-btn view-btn" onClick={() => handleViewDetails(order)} title="View Details">
-                        👁️
-                      </button>
-                      <button className="action-btn status-btn" onClick={() => handleStatusClick(order)} title="Update Status">
-                        ✏️
-                      </button>
-                      <button className="action-btn delete-btn" onClick={() => handleDeleteClick(order)} title="Delete Order">
-                        🗑️
-                      </button>
+                    <td>
+                      <div className="actions-cell">
+                        <button className="action-btn view-btn" onClick={() => handleViewDetails(order)} title="View Details">
+                          👁️
+                        </button>
+                        <button className="action-btn status-btn" onClick={() => handleStatusClick(order)} title="Update Status">
+                          ✏️
+                        </button>
+                        <button className="action-btn delete-btn" onClick={() => handleDeleteClick(order)} title="Delete Order">
+                          🗑️
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

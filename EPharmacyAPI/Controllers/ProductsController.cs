@@ -105,9 +105,15 @@ public class ProductsController : ControllerBase
                     PropertyNameCaseInsensitive = true 
                 };
                 ingredientDtos = System.Text.Json.JsonSerializer.Deserialize<List<IngredientLineDto>>(dto.IngredientsJson, options) ?? new List<IngredientLineDto>();
+                Console.WriteLine($"[DEBUG] Deserialized {ingredientDtos.Count} ingredients");
+                foreach (var ing in ingredientDtos)
+                {
+                    Console.WriteLine($"[DEBUG] Ingredient: Id={ing.IngredientId}, Amount={ing.Amount}, Unit={ing.Unit}");
+                }
             }
-            catch
+            catch (Exception ex)
             {
+                Console.WriteLine($"[DEBUG] JSON parse error: {ex.Message}");
                 return BadRequest("Invalid ingredients JSON format.");
             }
         }
