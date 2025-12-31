@@ -1,6 +1,7 @@
 using System.Linq;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
+using EPharmacyAPI.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,10 +17,6 @@ public class BrandsController : ControllerBase
     {
         _brandService = brandService;
     }
-
-    public record BrandResponse(int Id, string Name);
-    public record BrandCreateDto(string Name);
-    public record BrandUpdateDto(string Name);
 
     [HttpGet]
     [AllowAnonymous]
@@ -42,7 +39,6 @@ public class BrandsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public IActionResult Post([FromBody] BrandCreateDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
         var brand = new Brand { Name = dto.Name };
         _brandService.Save(brand);
         return CreatedAtAction(nameof(GetById), new { id = brand.Id }, new BrandResponse(brand.Id, brand.Name));

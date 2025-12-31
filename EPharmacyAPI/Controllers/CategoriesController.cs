@@ -1,6 +1,7 @@
 using System.Linq;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
+using EPharmacyAPI.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,10 +17,6 @@ public class CategoriesController : ControllerBase
     {
         _categoryService = categoryService;
     }
-
-    public record CategoryResponse(int Id, string Name, int? ParentCategoryId, List<int> SubcategoryIds);
-    public record CategoryCreateDto(string Name, int? ParentCategoryId = null);
-    public record CategoryUpdateDto(string Name, int? ParentCategoryId = null);
 
     [HttpGet]
     [AllowAnonymous]
@@ -44,8 +41,6 @@ public class CategoriesController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public IActionResult Post([FromBody] CategoryCreateDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
-
         if (dto.ParentCategoryId.HasValue && _categoryService.GetById(dto.ParentCategoryId.Value) == null)
             return BadRequest("Parent category not found.");
 

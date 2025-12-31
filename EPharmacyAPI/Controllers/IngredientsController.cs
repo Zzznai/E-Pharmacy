@@ -1,6 +1,7 @@
 using System.Linq;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
+using EPharmacyAPI.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,10 +17,6 @@ public class IngredientsController : ControllerBase
     {
         _ingredientService = ingredientService;
     }
-
-    public record IngredientResponse(int Id, string Name, string Description, bool IsActiveSubstance);
-    public record IngredientCreateDto(string Name, string Description, bool IsActiveSubstance);
-    public record IngredientUpdateDto(string Name, string Description, bool IsActiveSubstance);
 
     [HttpGet]
     [AllowAnonymous]
@@ -43,8 +40,6 @@ public class IngredientsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public IActionResult Post([FromBody] IngredientCreateDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
-
         var ingredient = new Ingredient
         {
             Name = dto.Name,
