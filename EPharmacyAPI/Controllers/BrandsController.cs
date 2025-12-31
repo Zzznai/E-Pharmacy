@@ -40,7 +40,7 @@ public class BrandsController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Create([FromBody] BrandCreateDto dto)
+    public IActionResult Post([FromBody] BrandCreateDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
         var brand = new Brand { Name = dto.Name };
@@ -50,7 +50,7 @@ public class BrandsController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Update(int id, [FromBody] BrandUpdateDto dto)
+    public IActionResult Put(int id, [FromBody] BrandUpdateDto dto)
     {
         var brand = _brandService.GetById(id);
         if (brand == null) return NotFound();

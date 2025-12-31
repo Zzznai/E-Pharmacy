@@ -50,7 +50,7 @@ public class IngredientsController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Update(int id, [FromBody] IngredientUpdateDto dto)
+    public IActionResult Put(int id, [FromBody] IngredientUpdateDto dto)
     {
         var ingredient = _ingredientService.GetById(id);
         if (ingredient == null) return NotFound();

@@ -42,7 +42,7 @@ public class CategoriesController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Create([FromBody] CategoryCreateDto dto)
+    public IActionResult Post([FromBody] CategoryCreateDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
 
@@ -57,7 +57,7 @@ public class CategoriesController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Update(int id, [FromBody] CategoryUpdateDto dto)
+    public IActionResult Put(int id, [FromBody] CategoryUpdateDto dto)
     {
         var category = _categoryService.GetById(id);
         if (category == null) return NotFound();

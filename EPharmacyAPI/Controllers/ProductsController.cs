@@ -34,6 +34,7 @@ public class ProductsController : ControllerBase
             p.Name,
             p.PhotoUrl,
             p.Price,
+            p.AvailableQuantity,
             p.Description,
             p.IsPrescriptionRequired,
             p.BrandId,
@@ -56,6 +57,7 @@ public class ProductsController : ControllerBase
             product.Name,
             product.PhotoUrl,
             product.Price,
+            product.AvailableQuantity,
             product.Description,
             product.IsPrescriptionRequired,
             product.BrandId,
@@ -70,6 +72,7 @@ public class ProductsController : ControllerBase
     public IActionResult Create([FromBody] ProductCreateDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
+        if (dto.AvailableQuantity < 0) return BadRequest("Available quantity cannot be negative.");
 
         var categoryIds = dto.CategoryIds ?? new List<int>();
         var ingredientDtos = dto.Ingredients ?? new List<IngredientLineDto>();
@@ -97,6 +100,7 @@ public class ProductsController : ControllerBase
             Name = dto.Name,
             PhotoUrl = dto.PhotoUrl,
             Price = dto.Price,
+            AvailableQuantity = dto.AvailableQuantity,
             Description = dto.Description,
             IsPrescriptionRequired = dto.IsPrescriptionRequired,
             BrandId = dto.BrandId
@@ -116,6 +120,7 @@ public class ProductsController : ControllerBase
             product.Name,
             product.PhotoUrl,
             product.Price,
+            product.AvailableQuantity,
             product.Description,
             product.IsPrescriptionRequired,
             product.BrandId,
@@ -135,6 +140,7 @@ public class ProductsController : ControllerBase
         product.Name = dto.Name;
         product.PhotoUrl = dto.PhotoUrl;
         product.Price = dto.Price;
+        product.AvailableQuantity = dto.AvailableQuantity;
         product.Description = dto.Description;
         product.IsPrescriptionRequired = dto.IsPrescriptionRequired;
 
@@ -177,6 +183,20 @@ public class ProductsController : ControllerBase
         if (product == null) return NotFound();
 
         _productService.Delete(product);
+        return NoContent();
+    }
+
+    [HttpPatch("{id}/quantity")]
+    [Authorize(Roles = "Administrator")]
+    public IActionResult SetQuantity(int id, [FromBody] int availableQuantity)
+    {
+        if (availableQuantity < 0) return BadRequest("Quantity cannot be negative.");
+
+        var product = _productService.GetById(id);
+        if (product == null) return NotFound();
+
+        product.AvailableQuantity = availableQuantity;
+        _productService.Save(product);
         return NoContent();
     }
 
