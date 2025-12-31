@@ -1,5 +1,24 @@
 const API_BASE_URL = 'http://localhost:5292/api';
 
+// Helper to parse error responses from the API
+function parseErrorResponse(errorText) {
+  try {
+    const parsed = JSON.parse(errorText);
+    // Handle validation errors from FluentValidation
+    if (parsed.errors) {
+      const messages = Object.values(parsed.errors).flat();
+      return messages.join('. ');
+    }
+    // Handle standard problem details
+    if (parsed.title) {
+      return parsed.title;
+    }
+    return parsed.message || errorText;
+  } catch {
+    return errorText;
+  }
+}
+
 export const authService = {
   async login(username, password) {
     const response = await fetch(`${API_BASE_URL}/Auth/token`, {
@@ -15,8 +34,11 @@ export const authService = {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Username or password is incorrect');
+      }
       const error = await response.text();
-      throw new Error(error || 'Login failed');
+      throw new Error(parseErrorResponse(error) || 'Login failed');
     }
 
     const data = await response.json();
@@ -49,7 +71,7 @@ export const authService = {
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(error || 'Signup failed');
+      throw new Error(parseErrorResponse(error) || 'Signup failed');
     }
 
     return await response.json();
