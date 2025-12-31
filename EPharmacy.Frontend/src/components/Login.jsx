@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import './Login.css';
 
@@ -7,6 +8,7 @@ function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -16,13 +18,8 @@ function Login() {
     try {
       const response = await authService.login(username, password);
       console.log('Login successful:', response);
-      // Redirect or update UI after successful login
-      alert(`Login successful! Token expires at: ${new Date(response.expiresAt).toLocaleString()}`);
-      
-      // You can redirect to another page or update the app state here
-      // For now, we'll just clear the form
-      setUsername('');
-      setPassword('');
+      // Redirect to dashboard after successful login
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Failed to login. Please check your credentials.');
       console.error('Login error:', err);
@@ -33,6 +30,22 @@ function Login() {
 
   return (
     <div className="login-container">
+      {/* Floating Medications */}
+      <div className="floating-meds">
+        <div className="med-item">💊</div>
+        <div className="med-item">💉</div>
+        <div className="med-item">🩹</div>
+        <div className="med-item">💊</div>
+        <div className="med-item">💉</div>
+        <div className="med-item">🧴</div>
+        <div className="med-item">💊</div>
+        <div className="med-item">🩹</div>
+        <div className="med-item">🧪</div>
+        <div className="med-item">💊</div>
+        <div className="med-item">🩼</div>
+        <div className="med-item">💉</div>
+      </div>
+
       <div className="login-card">
         <div className="login-header">
           <h1>E-Pharmacy</h1>
@@ -80,6 +93,10 @@ function Login() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        <div className="login-footer">
+          <p>Don't have an account? <button type="button" className="link-button" onClick={() => navigate('/signup')}>Sign Up</button></p>
+        </div>
       </div>
     </div>
   );
