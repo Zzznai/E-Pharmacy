@@ -57,6 +57,10 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IngredientService>();
 builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<OrderItemService>();
+builder.Services.AddScoped<BrandService>();
 
 // configure JWT
 var jwt = builder.Configuration.GetSection("Jwt");

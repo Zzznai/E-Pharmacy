@@ -17,16 +17,16 @@ public class CategoriesController : ControllerBase
         _categoryService = categoryService;
     }
 
-    public record CategoryResponse(int Id, string Name);
-    public record CategoryCreateDto(string Name);
-    public record CategoryUpdateDto(string Name);
+    public record CategoryResponse(int Id, string Name, int? ParentCategoryId, List<int> SubcategoryIds);
+    public record CategoryCreateDto(string Name, int? ParentCategoryId);
+    public record CategoryUpdateDto(string Name, int? ParentCategoryId);
 
     [HttpGet]
     [AllowAnonymous]
     public IActionResult GetAll()
     {
         var items = _categoryService.GetAll();
-        var result = items.Select(c => new CategoryResponse(c.Id, c.Name));
+        var result = items.Select(c => new CategoryResponse(c.Id, c.Name, c.ParentCategoryId, c.Subcategories.Select(s => s.Id).ToList()));
         return Ok(result);
     }
 
@@ -37,7 +37,7 @@ public class CategoriesController : ControllerBase
         var category = _categoryService.GetById(id);
         if (category == null) return NotFound();
 
-        return Ok(new CategoryResponse(category.Id, category.Name));
+        return Ok(new CategoryResponse(category.Id, category.Name, category.ParentCategoryId, category.Subcategories.Select(s => s.Id).ToList()));
     }
 
     [HttpPost]
@@ -46,10 +46,13 @@ public class CategoriesController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
 
-        var category = new Category { Name = dto.Name };
+        if (dto.ParentCategoryId.HasValue && _categoryService.GetById(dto.ParentCategoryId.Value) == null)
+            return BadRequest("Parent category not found.");
+
+        var category = new Category { Name = dto.Name, ParentCategoryId = dto.ParentCategoryId };
         _categoryService.Save(category);
 
-        return CreatedAtAction(nameof(GetById), new { id = category.Id }, new CategoryResponse(category.Id, category.Name));
+        return CreatedAtAction(nameof(GetById), new { id = category.Id }, new CategoryResponse(category.Id, category.Name, category.ParentCategoryId, new List<int>()));
     }
 
     [HttpPut("{id}")]
@@ -60,6 +63,7 @@ public class CategoriesController : ControllerBase
         if (category == null) return NotFound();
 
         category.Name = dto.Name;
+        category.ParentCategoryId = dto.ParentCategoryId;
         _categoryService.Save(category);
         return NoContent();
     }

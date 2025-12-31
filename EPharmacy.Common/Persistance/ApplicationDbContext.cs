@@ -14,6 +14,7 @@ public class ApplicationDbContext : DbContext
 
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<Category> Categories { get; set; } = null!;
+    public DbSet<Brand> Brands { get; set; } = null!;
     public DbSet<Ingredient> Ingredients { get; set; } = null!;
     public DbSet<ProductIngredient> ProductIngredients { get; set; } = null!;
     public DbSet<Order> Orders { get; set; } = null!;
@@ -27,6 +28,18 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Product>()
             .HasMany(p => p.Categories)
             .WithMany(c => c.Products);
+
+        modelBuilder.Entity<Product>()
+            .HasOne(p => p.Brand)
+            .WithMany(b => b.Products)
+            .HasForeignKey(p => p.BrandId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Category>()
+            .HasOne(c => c.ParentCategory)
+            .WithMany(c => c.Subcategories)
+            .HasForeignKey(c => c.ParentCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<ProductIngredient>()
             .HasOne(pi => pi.Product)

@@ -10,14 +10,23 @@ public class CategoryService : BaseService<Category>
     {
     }
 
-    // Ensure deleting a category detaches related products instead of deleting them.
+    // Ensure deleting a category detaches related products and re-parents children.
     public new void Delete(Category category)
     {
         if (category == null) return;
 
-        // Load related products and clear the many-to-many link entries.
         Context.Entry(category).Collection(c => c.Products).Load();
+        Context.Entry(category).Collection(c => c.Subcategories).Load();
+
+        // Detach products
         category.Products.Clear();
+
+        // Re-parent children to null (orphan)
+        foreach (var child in category.Subcategories)
+        {
+            child.ParentCategoryId = null;
+            Context.Categories.Update(child);
+        }
 
         Context.Categories.Remove(category);
         Context.SaveChanges();

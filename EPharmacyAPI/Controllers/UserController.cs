@@ -40,7 +40,6 @@ public class UserController : ControllerBase
         var user = _userService.GetById(id);
         if (user == null) return NotFound();
 
-        // allow owner or admin
         var callerIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
         var callerId = int.TryParse(callerIdClaim, out var cid) ? cid : -1;
         if (callerId != id && !User.IsInRole("Administrator"))
