@@ -36,6 +36,12 @@ public class AuthController : ControllerBase
             return Unauthorized();
 
         var token = _tokenService.CreateToken(user);
-        return Ok(new AuthResponseDto { Token = token, ExpiresAt = DateTime.UtcNow.AddHours(1) });
+        return Ok(new AuthResponseDto 
+        { 
+            Token = token, 
+            ExpiresAt = DateTime.UtcNow.AddHours(1),
+            Role = user.Role.ToString(),
+            UserId = user.Id
+        });
     }
 }

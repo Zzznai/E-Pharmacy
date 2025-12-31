@@ -73,6 +73,7 @@ builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<OrderItemService>();
 builder.Services.AddScoped<BrandService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 // configure JWT
 var jwt = builder.Configuration.GetSection("Jwt");

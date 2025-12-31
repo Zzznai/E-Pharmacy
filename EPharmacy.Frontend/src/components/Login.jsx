@@ -18,8 +18,12 @@ function Login() {
     try {
       const response = await authService.login(username, password);
       console.log('Login successful:', response);
-      // Redirect to dashboard after successful login
-      navigate('/dashboard');
+      // Redirect based on user role
+      if (response.role === 'Administrator') {
+        navigate('/dashboard');
+      } else {
+        navigate('/shop');
+      }
     } catch (err) {
       setError(err.message || 'Failed to login. Please check your credentials.');
       console.error('Login error:', err);

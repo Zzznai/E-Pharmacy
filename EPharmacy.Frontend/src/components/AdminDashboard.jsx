@@ -60,7 +60,7 @@ function AdminDashboard() {
             <button className="card-button" onClick={(e) => { e.stopPropagation(); navigate('/users'); }}>View Users</button>
           </div>
 
-          <div className="dashboard-card" onClick={() => {}}>
+          <div className="dashboard-card" onClick={() => navigate('/products')}>
             <div className="card-icon-wrapper">
               <div className="icon-products">
                 <div className="capsule-container">
@@ -87,10 +87,10 @@ function AdminDashboard() {
             </div>
             <h3>Products</h3>
             <p>Manage pharmacy products and inventory</p>
-            <button className="card-button">View Products</button>
+            <button className="card-button" onClick={(e) => { e.stopPropagation(); navigate('/products'); }}>View Products</button>
           </div>
 
-          <div className="dashboard-card" onClick={() => {}}>
+          <div className="dashboard-card" onClick={() => navigate('/orders')}>
             <div className="card-icon-wrapper">
               <div className="icon-orders">
                 <div className="package">
@@ -107,10 +107,10 @@ function AdminDashboard() {
             </div>
             <h3>Orders</h3>
             <p>View and manage customer orders</p>
-            <button className="card-button">View Orders</button>
+            <button className="card-button" onClick={(e) => { e.stopPropagation(); navigate('/orders'); }}>View Orders</button>
           </div>
 
-          <div className="dashboard-card" onClick={() => {}}>
+          <div className="dashboard-card" onClick={() => navigate('/categories')}>
             <div className="card-icon-wrapper">
               <div className="icon-categories">
                 <div className="folder">
@@ -122,10 +122,10 @@ function AdminDashboard() {
             </div>
             <h3>Categories</h3>
             <p>Manage product categories</p>
-            <button className="card-button">View Categories</button>
+            <button className="card-button" onClick={(e) => { e.stopPropagation(); navigate('/categories'); }}>View Categories</button>
           </div>
 
-          <div className="dashboard-card" onClick={() => {}}>
+          <div className="dashboard-card" onClick={() => navigate('/ingredients')}>
             <div className="card-icon-wrapper">
               <div className="icon-ingredients">
                 <div className="beaker">
@@ -146,7 +146,7 @@ function AdminDashboard() {
             </div>
             <h3>Ingredients</h3>
             <p>Manage product ingredients</p>
-            <button className="card-button">View Ingredients</button>
+            <button className="card-button" onClick={(e) => { e.stopPropagation(); navigate('/ingredients'); }}>View Ingredients</button>
           </div>
 
           <div className="dashboard-card" onClick={() => navigate('/brands')}>

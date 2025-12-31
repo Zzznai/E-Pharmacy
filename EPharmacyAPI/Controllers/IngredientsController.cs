@@ -21,6 +21,14 @@ public class IngredientsController : ControllerBase
     public record IngredientCreateDto(string Name, string Description, bool IsActiveSubstance);
     public record IngredientUpdateDto(string Name, string Description, bool IsActiveSubstance);
 
+    [HttpGet]
+    [AllowAnonymous]
+    public IActionResult GetAll()
+    {
+        var items = _ingredientService.GetAll();
+        return Ok(items.Select(i => new IngredientResponse(i.Id, i.Name, i.Description, i.IsActiveSubstance)));
+    }
+
     [HttpGet("{id}")]
     [AllowAnonymous]
     public IActionResult GetById(int id)

@@ -21,10 +21,12 @@ export const authService = {
 
     const data = await response.json();
     
-    // Store token in localStorage
+    // Store token and user info in localStorage
     if (data.token) {
       localStorage.setItem('token', data.token);
       localStorage.setItem('tokenExpiry', data.expiresAt);
+      localStorage.setItem('userRole', data.role);
+      localStorage.setItem('userId', data.userId);
     }
     
     return data;
@@ -56,6 +58,9 @@ export const authService = {
   logout() {
     localStorage.removeItem('token');
     localStorage.removeItem('tokenExpiry');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('basket');
   },
 
   getToken() {

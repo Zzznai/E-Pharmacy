@@ -2,6 +2,7 @@ using System.Linq;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos;
+using EPharmacyAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,13 +16,20 @@ public class ProductsController : ControllerBase
     private readonly CategoryService _categoryService;
     private readonly IngredientService _ingredientService;
     private readonly BrandService _brandService;
+    private readonly ICloudinaryService _cloudinaryService;
 
-    public ProductsController(ProductService productService, CategoryService categoryService, IngredientService ingredientService, BrandService brandService)
+    public ProductsController(
+        ProductService productService, 
+        CategoryService categoryService, 
+        IngredientService ingredientService, 
+        BrandService brandService,
+        ICloudinaryService cloudinaryService)
     {
         _productService = productService;
         _categoryService = categoryService;
         _ingredientService = ingredientService;
         _brandService = brandService;
+        _cloudinaryService = cloudinaryService;
     }
 
     [HttpGet]
@@ -69,7 +77,7 @@ public class ProductsController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Create([FromBody] ProductCreateDto dto)
+    public async Task<IActionResult> Create([FromForm] ProductCreateFormDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Name)) return BadRequest("Name is required.");
         if (dto.Price <= 0) return BadRequest("Price must be greater than zero.");
@@ -85,7 +93,24 @@ public class ProductsController : ControllerBase
         }
 
         var categoryIds = dto.CategoryIds ?? new List<int>();
-        var ingredientDtos = dto.Ingredients ?? new List<IngredientLineDto>();
+        
+        // Parse ingredients from JSON string
+        var ingredientDtos = new List<IngredientLineDto>();
+        if (!string.IsNullOrWhiteSpace(dto.IngredientsJson))
+        {
+            try
+            {
+                var options = new System.Text.Json.JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                };
+                ingredientDtos = System.Text.Json.JsonSerializer.Deserialize<List<IngredientLineDto>>(dto.IngredientsJson, options) ?? new List<IngredientLineDto>();
+            }
+            catch
+            {
+                return BadRequest("Invalid ingredients JSON format.");
+            }
+        }
 
         // validate categories exist
         var categories = _categoryService.GetAll(c => categoryIds.Contains(c.Id));
@@ -105,10 +130,20 @@ public class ProductsController : ControllerBase
         if (dto.BrandId.HasValue && _brandService.GetById(dto.BrandId.Value) == null)
             return BadRequest("Brand not found.");
 
+        // Upload image to Cloudinary if provided
+        string? photoUrl = null;
+        if (dto.Image != null && dto.Image.Length > 0)
+        {
+            var uploadResult = await _cloudinaryService.UploadImageAsync(dto.Image);
+            if (uploadResult == null)
+                return BadRequest("Failed to upload image.");
+            photoUrl = uploadResult;
+        }
+
         var product = new Product
         {
             Name = dto.Name,
-            PhotoUrl = dto.PhotoUrl,
+            PhotoUrl = photoUrl,
             Price = dto.Price,
             AvailableQuantity = dto.AvailableQuantity,
             Description = dto.Description,
@@ -142,7 +177,7 @@ public class ProductsController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Update(int id, [FromBody] ProductUpdateDto dto)
+    public async Task<IActionResult> Update(int id, [FromForm] ProductUpdateFormDto dto)
     {
         var product = _productService.GetWithDetails(id);
         if (product == null) return NotFound();
@@ -158,15 +193,25 @@ public class ProductsController : ControllerBase
         }
         if (dto.Price <= 0) return BadRequest("Price must be greater than zero.");
 
-        product.Name = dto.Name;
-        product.PhotoUrl = dto.PhotoUrl;
-        product.Price = dto.Price;
-        product.AvailableQuantity = dto.AvailableQuantity;
-        product.Description = dto.Description;
-        product.IsPrescriptionRequired = dto.IsPrescriptionRequired;
+        // Parse ingredients from JSON string
+        var ingredientDtos = new List<IngredientLineDto>();
+        if (!string.IsNullOrWhiteSpace(dto.IngredientsJson))
+        {
+            try
+            {
+                var options = new System.Text.Json.JsonSerializerOptions 
+                { 
+                    PropertyNameCaseInsensitive = true 
+                };
+                ingredientDtos = System.Text.Json.JsonSerializer.Deserialize<List<IngredientLineDto>>(dto.IngredientsJson, options) ?? new List<IngredientLineDto>();
+            }
+            catch
+            {
+                return BadRequest("Invalid ingredients JSON format.");
+            }
+        }
 
         var categoryIds = dto.CategoryIds ?? new List<int>();
-        var ingredientDtos = dto.Ingredients ?? new List<IngredientLineDto>();
 
         var categories = _categoryService.GetAll(c => categoryIds.Contains(c.Id));
         if (categories.Count != categoryIds.Count)
@@ -183,6 +228,33 @@ public class ProductsController : ControllerBase
         if (dto.BrandId.HasValue && _brandService.GetById(dto.BrandId.Value) == null)
             return BadRequest("Brand not found.");
 
+        // Handle image update
+        if (dto.RemoveImage && !string.IsNullOrEmpty(product.PhotoUrl))
+        {
+            // Delete existing image from Cloudinary
+            await _cloudinaryService.DeleteImageAsync(_cloudinaryService.GetPublicIdFromUrl(product.PhotoUrl));
+            product.PhotoUrl = null;
+        }
+        else if (dto.Image != null && dto.Image.Length > 0)
+        {
+            // Delete existing image if present
+            if (!string.IsNullOrEmpty(product.PhotoUrl))
+            {
+                await _cloudinaryService.DeleteImageAsync(_cloudinaryService.GetPublicIdFromUrl(product.PhotoUrl));
+            }
+            // Upload new image
+            var uploadResult = await _cloudinaryService.UploadImageAsync(dto.Image);
+            if (uploadResult == null)
+                return BadRequest("Failed to upload image.");
+            product.PhotoUrl = uploadResult;
+        }
+
+        product.Name = dto.Name;
+        product.Price = dto.Price;
+        product.AvailableQuantity = dto.AvailableQuantity;
+        product.Description = dto.Description;
+        product.IsPrescriptionRequired = dto.IsPrescriptionRequired;
+
         var productIngredients = ingredientDtos.Select(i => new ProductIngredient
         {
             IngredientId = i.IngredientId,
@@ -198,10 +270,16 @@ public class ProductsController : ControllerBase
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
         var product = _productService.GetById(id);
         if (product == null) return NotFound();
+
+        // Delete image from Cloudinary if exists
+        if (!string.IsNullOrEmpty(product.PhotoUrl))
+        {
+            await _cloudinaryService.DeleteImageAsync(_cloudinaryService.GetPublicIdFromUrl(product.PhotoUrl));
+        }
 
         _productService.Delete(product);
         return NoContent();

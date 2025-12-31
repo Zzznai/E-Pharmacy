@@ -33,6 +33,21 @@ public class UserController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("profile")]
+    [Authorize]
+    public IActionResult GetProfile()
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+            ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+        
+        if (!int.TryParse(userIdClaim, out var userId)) return Unauthorized();
+
+        var user = _userService.GetById(userId);
+        if (user == null) return NotFound();
+
+        return Ok(new UserResponse(user.Id, user.Username, user.FirstName, user.LastName, user.Role.ToString()));
+    }
+
     [HttpGet("{id}")]
     [Authorize]
     public IActionResult GetById(int id)
