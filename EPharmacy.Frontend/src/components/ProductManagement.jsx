@@ -425,12 +425,25 @@ function ProductManagement() {
             onClick={() => handleCategoryToggle(category.id)}
           >
             <div className="category-card-content">
-              {hasChildren && <span className="category-expand-icon">📁</span>}
-              {!hasChildren && <span className="category-leaf-icon">📄</span>}
+              {hasChildren && (
+                <svg className="category-icon folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+              )}
+              {!hasChildren && (
+                <svg className="category-icon file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+              )}
               <span className="category-card-name">{category.name}</span>
             </div>
             <div className={`category-checkbox-indicator ${isSelected ? 'checked' : ''}`}>
-              {isSelected && '✓'}
+              {isSelected && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
             </div>
           </div>
           {hasChildren && (
@@ -506,7 +519,11 @@ function ProductManagement() {
                 <img src={product.photoUrl} alt={product.name} className="product-image" />
               ) : (
                 <div className="product-no-image">
-                  <span>📦</span>
+                  <svg className="no-image-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                    <line x1="12" y1="22.08" x2="12" y2="12" />
+                  </svg>
                 </div>
               )}
               {product.isPrescriptionRequired && (
@@ -527,13 +544,24 @@ function ProductManagement() {
             </div>
             <div className="product-actions">
               <button className="action-btn view-btn" onClick={() => handleViewDetail(product)} title="View Details">
-                👁
+                <svg className="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
               </button>
               <button className="action-btn edit-btn" onClick={() => handleEdit(product)} title="Edit">
-                ✏️
+                <svg className="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
               </button>
               <button className="action-btn delete-btn" onClick={() => handleDelete(product)} title="Delete">
-                🗑️
+                <svg className="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
               </button>
             </div>
           </div>
@@ -542,7 +570,13 @@ function ProductManagement() {
 
       {filteredProducts.length === 0 && (
         <div className="empty-state">
-          <span className="empty-icon">📦</span>
+          <div className="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+              <line x1="12" y1="22.08" x2="12" y2="12" />
+            </svg>
+          </div>
           <p>No products found</p>
           <button className="add-product-button" onClick={handleAdd}>Add Your First Product</button>
         </div>
@@ -554,7 +588,12 @@ function ProductManagement() {
           <div className="modal-content product-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Add New Product</h2>
-              <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
+              <button className="modal-close" onClick={() => setShowAddModal(false)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
             <form onSubmit={handleSubmitAdd}>
               <div className="modal-body">
@@ -640,12 +679,24 @@ function ProductManagement() {
                     {imagePreview ? (
                       <div className="image-preview">
                         <img src={imagePreview} alt="Preview" />
-                        <button type="button" className="remove-image-btn" onClick={handleRemoveImage}>×</button>
+                        <button type="button" className="remove-image-btn" onClick={handleRemoveImage}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
                       </div>
                     ) : (
                       <label className="upload-label">
                         <input type="file" accept="image/*" onChange={handleImageChange} />
-                        <span>📷 Click to upload image</span>
+                        <div className="upload-content">
+                          <svg className="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                          </svg>
+                          <span>Click to upload image</span>
+                        </div>
                       </label>
                     )}
                   </div>
@@ -658,12 +709,17 @@ function ProductManagement() {
                       <input
                         type="text"
                         className="category-search-input"
-                        placeholder="🔍 Search categories..."
+                        placeholder="Search categories..."
                         value={categorySearch}
                         onChange={(e) => setCategorySearch(e.target.value)}
                       />
                       {categorySearch && (
-                        <button type="button" className="clear-search" onClick={() => setCategorySearch('')}>×</button>
+                        <button type="button" className="clear-search" onClick={() => setCategorySearch('')}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
                       )}
                     </div>
                     {formData.categoryIds.length > 0 && (
@@ -694,7 +750,7 @@ function ProductManagement() {
                               ref={ingredientInputRef}
                               type="text"
                               className="ingredient-search-input"
-                              placeholder="🔍 Type to search ingredients..."
+                              placeholder="Type to search ingredients..."
                               value={ingredientSearch}
                               onChange={(e) => {
                                 setIngredientSearch(e.target.value);
@@ -748,7 +804,12 @@ function ProductManagement() {
                             className="add-ingredient-btn" 
                             onClick={handleAddIngredient}
                             disabled={!selectedIngredientId || !ingredientAmount}
-                          >+</button>
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <line x1="12" y1="5" x2="12" y2="19" />
+                              <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                          </button>
                         </div>
                         <div className="ingredients-list">
                           {formData.ingredients.length === 0 && (
@@ -757,7 +818,12 @@ function ProductManagement() {
                           {formData.ingredients.map(ing => (
                             <div key={ing.ingredientId} className="ingredient-tag">
                               <span>{getIngredientName(ing.ingredientId)} - {ing.amount} {ing.unit}</span>
-                              <button type="button" onClick={() => handleRemoveIngredient(ing.ingredientId)}>×</button>
+                              <button type="button" className="remove-tag-btn" onClick={() => handleRemoveIngredient(ing.ingredientId)}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <line x1="18" y1="6" x2="6" y2="18" />
+                                  <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -767,9 +833,28 @@ function ProductManagement() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="cancel-btn" onClick={() => setShowAddModal(false)}>Cancel</button>
+                <button type="button" className="cancel-btn" onClick={() => setShowAddModal(false)}>
+                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                  Cancel
+                </button>
                 <button type="submit" className="submit-btn" disabled={submitting}>
-                  {submitting ? 'Creating...' : 'Create Product'}
+                  {submitting ? (
+                    <span className="btn-loading">
+                      <span className="spinner-small"></span>
+                      Creating...
+                    </span>
+                  ) : (
+                    <>
+                      <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      Create Product
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -783,7 +868,12 @@ function ProductManagement() {
           <div className="modal-content product-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Edit Product</h2>
-              <button className="modal-close" onClick={() => setShowEditModal(false)}>×</button>
+              <button className="modal-close" onClick={() => setShowEditModal(false)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
             <form onSubmit={handleSubmitEdit}>
               <div className="modal-body">
@@ -869,12 +959,24 @@ function ProductManagement() {
                     {imagePreview ? (
                       <div className="image-preview">
                         <img src={imagePreview} alt="Preview" />
-                        <button type="button" className="remove-image-btn" onClick={handleRemoveImage}>×</button>
+                        <button type="button" className="remove-image-btn" onClick={handleRemoveImage}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
                       </div>
                     ) : (
                       <label className="upload-label">
                         <input type="file" accept="image/*" onChange={handleImageChange} />
-                        <span>📷 Click to upload image</span>
+                        <div className="upload-content">
+                          <svg className="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                          </svg>
+                          <span>Click to upload image</span>
+                        </div>
                       </label>
                     )}
                   </div>
@@ -887,12 +989,17 @@ function ProductManagement() {
                       <input
                         type="text"
                         className="category-search-input"
-                        placeholder="🔍 Search categories..."
+                        placeholder="Search categories..."
                         value={categorySearch}
                         onChange={(e) => setCategorySearch(e.target.value)}
                       />
                       {categorySearch && (
-                        <button type="button" className="clear-search" onClick={() => setCategorySearch('')}>×</button>
+                        <button type="button" className="clear-search" onClick={() => setCategorySearch('')}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
+                          </svg>
+                        </button>
                       )}
                     </div>
                     {formData.categoryIds.length > 0 && (
@@ -923,7 +1030,7 @@ function ProductManagement() {
                               ref={ingredientInputRef}
                               type="text"
                               className="ingredient-search-input"
-                              placeholder="🔍 Type to search ingredients..."
+                              placeholder="Type to search ingredients..."
                               value={ingredientSearch}
                               onChange={(e) => {
                                 setIngredientSearch(e.target.value);
@@ -977,7 +1084,12 @@ function ProductManagement() {
                             className="add-ingredient-btn" 
                             onClick={handleAddIngredient}
                             disabled={!selectedIngredientId || !ingredientAmount}
-                          >+</button>
+                          >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <line x1="12" y1="5" x2="12" y2="19" />
+                              <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                          </button>
                         </div>
                         <div className="ingredients-list">
                           {formData.ingredients.length === 0 && (
@@ -986,7 +1098,12 @@ function ProductManagement() {
                           {formData.ingredients.map(ing => (
                             <div key={ing.ingredientId} className="ingredient-tag">
                               <span>{getIngredientName(ing.ingredientId)} - {ing.amount} {ing.unit}</span>
-                              <button type="button" onClick={() => handleRemoveIngredient(ing.ingredientId)}>×</button>
+                              <button type="button" className="remove-tag-btn" onClick={() => handleRemoveIngredient(ing.ingredientId)}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <line x1="18" y1="6" x2="6" y2="18" />
+                                  <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
                             </div>
                           ))}
                         </div>
@@ -996,9 +1113,29 @@ function ProductManagement() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)}>Cancel</button>
+                <button type="button" className="cancel-btn" onClick={() => setShowEditModal(false)}>
+                  <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                  Cancel
+                </button>
                 <button type="submit" className="submit-btn" disabled={submitting}>
-                  {submitting ? 'Saving...' : 'Save Changes'}
+                  {submitting ? (
+                    <span className="btn-loading">
+                      <span className="spinner-small"></span>
+                      Saving...
+                    </span>
+                  ) : (
+                    <>
+                      <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <polyline points="17 21 17 13 7 13 7 21" />
+                        <polyline points="7 3 7 8 15 8" />
+                      </svg>
+                      Save Changes
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -1012,7 +1149,12 @@ function ProductManagement() {
           <div className="modal-content detail-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Product Details</h2>
-              <button className="modal-close" onClick={() => setShowDetailModal(false)}>×</button>
+              <button className="modal-close" onClick={() => setShowDetailModal(false)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
             <div className="modal-body detail-body">
               <div className="detail-image-section">
@@ -1020,7 +1162,11 @@ function ProductManagement() {
                   <img src={selectedProduct.photoUrl} alt={selectedProduct.name} className="detail-image" />
                 ) : (
                   <div className="detail-no-image">
-                    <span>📦</span>
+                    <svg className="no-image-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                      <line x1="12" y1="22.08" x2="12" y2="12" />
+                    </svg>
                   </div>
                 )}
               </div>
@@ -1074,8 +1220,18 @@ function ProductManagement() {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowDetailModal(false)}>Close</button>
+              <button className="cancel-btn" onClick={() => setShowDetailModal(false)}>
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+                Close
+              </button>
               <button className="submit-btn" onClick={() => { setShowDetailModal(false); handleEdit(selectedProduct); }}>
+                <svg className="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
                 Edit Product
               </button>
             </div>

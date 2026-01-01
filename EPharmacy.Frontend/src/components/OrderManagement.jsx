@@ -216,42 +216,75 @@ function OrderManagement() {
       {/* Stats Cards */}
       <div className="stats-grid">
         <div className="stat-card total">
-          <div className="stat-icon">📦</div>
+          <div className="stat-icon">
+            <svg className="stat-svg total-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+              <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+          </div>
           <div className="stat-info">
             <span className="stat-value">{stats.total}</span>
             <span className="stat-label">Total Orders</span>
           </div>
         </div>
         <div className="stat-card pending">
-          <div className="stat-icon">⏳</div>
+          <div className="stat-icon">
+            <svg className="stat-svg pending-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
           <div className="stat-info">
             <span className="stat-value">{stats.pending}</span>
             <span className="stat-label">Pending</span>
           </div>
         </div>
         <div className="stat-card processing">
-          <div className="stat-icon">⚙️</div>
+          <div className="stat-icon">
+            <svg className="stat-svg processing-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </div>
           <div className="stat-info">
             <span className="stat-value">{stats.processing}</span>
             <span className="stat-label">Processing</span>
           </div>
         </div>
         <div className="stat-card shipped">
-          <div className="stat-icon">🚚</div>
+          <div className="stat-icon">
+            <svg className="stat-svg shipped-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="1" y="3" width="15" height="13"/>
+              <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+              <circle cx="5.5" cy="18.5" r="2.5"/>
+              <circle cx="18.5" cy="18.5" r="2.5"/>
+            </svg>
+          </div>
           <div className="stat-info">
             <span className="stat-value">{stats.shipped}</span>
             <span className="stat-label">Shipped</span>
           </div>
         </div>
         <div className="stat-card delivered">
-          <div className="stat-icon">✅</div>
+          <div className="stat-icon">
+            <svg className="stat-svg delivered-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+          </div>
           <div className="stat-info">
             <span className="stat-value">{stats.delivered}</span>
             <span className="stat-label">Delivered</span>
           </div>
         </div>
         <div className="stat-card revenue">
-          <div className="stat-icon">💰</div>
+          <div className="stat-icon">
+            <svg className="stat-svg revenue-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"/>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+          </div>
           <div className="stat-info">
             <span className="stat-value">{formatCurrency(stats.totalRevenue)}</span>
             <span className="stat-label">Total Revenue</span>
@@ -263,7 +296,14 @@ function OrderManagement() {
       <div className="chart-map-row">
         {/* Orders Per Day Chart */}
         <div className="chart-container">
-          <h3 className="chart-title">📊 Orders This Week</h3>
+          <h3 className="chart-title">
+            <svg className="title-icon chart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/>
+              <line x1="12" y1="20" x2="12" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="14"/>
+            </svg>
+            Orders This Week
+          </h3>
           <div className="bar-chart">
             {ordersPerDay.map((day, index) => (
               <div key={index} className="bar-column">
@@ -285,7 +325,17 @@ function OrderManagement() {
 
         {/* Top Products */}
         <div className="top-products-container">
-          <h3 className="chart-title">🏆 Top Selling Products</h3>
+          <h3 className="chart-title">
+            <svg className="title-icon trophy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+              <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+              <path d="M4 22h16"/>
+              <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+              <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+              <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+            </svg>
+            Top Selling Products
+          </h3>
           <div className="top-products-list">
             {topProducts.length === 0 ? (
               <div className="no-data">No product data yet</div>
@@ -349,7 +399,15 @@ function OrderManagement() {
       <div className="orders-table-container">
         {filteredOrders.length === 0 ? (
           <div className="empty-state">
-            <span className="empty-icon">📋</span>
+            <span className="empty-icon">
+              <svg className="empty-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                <line x1="8" y1="10" x2="16" y2="10"/>
+                <line x1="8" y1="14" x2="16" y2="14"/>
+                <line x1="8" y1="18" x2="12" y2="18"/>
+              </svg>
+            </span>
             <p>{searchTerm || statusFilter ? 'No orders match your filters' : 'No orders found'}</p>
           </div>
         ) : (
@@ -402,13 +460,24 @@ function OrderManagement() {
                     <td>
                       <div className="actions-cell">
                         <button className="action-btn view-btn" onClick={() => handleViewDetails(order)} title="View Details">
-                          👁️
+                          <svg className="action-icon view-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
                         </button>
                         <button className="action-btn status-btn" onClick={() => handleStatusClick(order)} title="Update Status">
-                          ✏️
+                          <svg className="action-icon edit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
                         </button>
                         <button className="action-btn delete-btn" onClick={() => handleDeleteClick(order)} title="Delete Order">
-                          🗑️
+                          <svg className="action-icon delete-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                          </svg>
                         </button>
                       </div>
                     </td>
@@ -426,7 +495,12 @@ function OrderManagement() {
           <div className="modal-content detail-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Order #{orderDetails.id}</h2>
-              <button className="modal-close" onClick={() => setShowDetailModal(false)}>×</button>
+              <button className="modal-close" onClick={() => setShowDetailModal(false)}>
+                <svg className="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
             </div>
             <div className="modal-body">
               <div className="order-detail-header">
@@ -452,7 +526,13 @@ function OrderManagement() {
 
               {/* Delivery Information */}
               <div className="delivery-info-section">
-                <h3>📍 Delivery Information</h3>
+                <h3>
+                  <svg className="section-icon location-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  Delivery Information
+                </h3>
                 <div className="delivery-details">
                   <div className="delivery-row">
                     <span className="delivery-label">Address</span>
@@ -515,7 +595,12 @@ function OrderManagement() {
           <div className="modal-content status-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Update Order Status</h2>
-              <button className="modal-close" onClick={() => setShowStatusModal(false)}>×</button>
+              <button className="modal-close" onClick={() => setShowStatusModal(false)}>
+                <svg className="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
             </div>
             <div className="modal-body">
               <p className="status-order-info">Order #{selectedOrder.id}</p>
@@ -559,11 +644,22 @@ function OrderManagement() {
           <div className="modal-content delete-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>Delete Order</h2>
-              <button className="modal-close" onClick={() => setShowDeleteModal(false)}>×</button>
+              <button className="modal-close" onClick={() => setShowDeleteModal(false)}>
+                <svg className="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
             </div>
             <div className="modal-body">
               <div className="delete-warning">
-                <span className="warning-icon">⚠️</span>
+                <span className="warning-icon">
+                  <svg className="warning-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                </span>
                 <p>Are you sure you want to delete Order #{selectedOrder.id}?</p>
                 <p className="warning-text">This action cannot be undone.</p>
               </div>

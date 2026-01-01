@@ -168,8 +168,85 @@
   transition: all 0.3s ease;
 }
 
+.stat-svg {
+  width: 32px;
+  height: 32px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card.total .stat-svg { stroke: #a78bfa; }
+.stat-card.pending .stat-svg { stroke: #facc14; }
+.stat-card.processing .stat-svg { stroke: #3b82f6; }
+.stat-card.shipped .stat-svg { stroke: #a855f7; }
+.stat-card.delivered .stat-svg { stroke: #22c55e; }
+.stat-card.revenue .stat-svg { stroke: #10b981; }
+
 .stat-card:hover .stat-icon {
   transform: scale(1.1) rotate(5deg);
+}
+
+.stat-card:hover .stat-svg {
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+/* Processing gear spin animation */
+@keyframes spin-gear {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.stat-card.processing:hover .processing-svg {
+  animation: spin-gear 2s linear infinite;
+}
+
+/* Shipped truck animation */
+@keyframes drive {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(5px); }
+}
+
+.stat-card.shipped:hover .shipped-svg {
+  animation: drive 0.5s ease-in-out infinite;
+}
+
+/* Pending clock pulse */
+@keyframes pulse-clock {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.stat-card.pending:hover .pending-svg {
+  animation: pulse-clock 1s ease-in-out infinite;
+}
+
+/* Delivered checkmark bounce */
+@keyframes bounce-check {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+.stat-card.delivered:hover .delivered-svg {
+  animation: bounce-check 0.5s ease-in-out;
+}
+
+/* Revenue pulse */
+@keyframes pulse-money {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.stat-card.revenue:hover .revenue-svg {
+  animation: pulse-money 0.6s ease-in-out infinite;
+}
+
+/* Total package float */
+@keyframes float-box {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.stat-card.total:hover .total-svg {
+  animation: float-box 0.8s ease-in-out infinite;
 }
 
 .stat-card.total .stat-icon { 
@@ -318,6 +395,44 @@
   font-size: 14px;
   font-weight: 600;
   color: #c4b5fd;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-icon {
+  width: 20px;
+  height: 20px;
+  stroke: #a78bfa;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chart-icon {
+  stroke: #3b82f6;
+}
+
+.trophy-icon {
+  stroke: #fbbf24;
+}
+
+@keyframes chart-bars {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.1); }
+}
+
+.chart-container:hover .chart-icon {
+  animation: chart-bars 0.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px #3b82f6);
+}
+
+@keyframes trophy-shine {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(5deg) scale(1.1); }
+}
+
+.top-products-container:hover .trophy-icon {
+  animation: trophy-shine 0.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px #fbbf24);
 }
 
 .bar-chart {
@@ -580,6 +695,21 @@
   font-size: 64px;
   margin-bottom: 20px;
   opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-svg {
+  width: 64px;
+  height: 64px;
+  stroke: #a78bfa;
+  animation: float-empty 3s ease-in-out infinite;
+}
+
+@keyframes float-empty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 .empty-state p {
@@ -728,8 +858,53 @@
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+.action-icon {
+  width: 18px;
+  height: 18px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.action-icon.view-icon { stroke: #3b82f6; }
+.action-icon.edit-icon { stroke: #a78bfa; }
+.action-icon.delete-icon { stroke: #ef4444; }
+
 .action-btn:hover {
   transform: translateY(-3px) scale(1.1);
+}
+
+/* View button - eye pulse animation */
+@keyframes pulse-view {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.9; }
+}
+
+.action-btn.view-btn:hover .action-icon {
+  animation: pulse-view 0.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px #3b82f6);
+}
+
+/* Status/Edit button - pencil wiggle animation */
+@keyframes wiggle-edit {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+
+.action-btn.status-btn:hover .action-icon {
+  animation: wiggle-edit 0.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px #a78bfa);
+}
+
+/* Delete button - shake animation */
+@keyframes shake-delete {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+.action-btn.delete-btn:hover .action-icon {
+  animation: shake-delete 0.3s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px #ef4444);
 }
 
 .action-btn.view-btn:hover {
@@ -838,14 +1013,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.close-icon {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .modal-close:hover {
   background: rgba(239, 68, 68, 0.15);
   border-color: rgba(239, 68, 68, 0.4);
   color: #f87171;
+}
+
+.modal-close:hover .close-icon {
   transform: rotate(90deg);
+  filter: drop-shadow(0 0 6px #f87171);
 }
 
 .modal-body {
@@ -916,6 +1102,29 @@
   font-size: 14px;
   font-weight: 600;
   color: #c4b5fd;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-icon {
+  width: 18px;
+  height: 18px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.location-icon {
+  stroke: #f87171;
+}
+
+@keyframes bounce-pin {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.delivery-info-section:hover .location-icon {
+  animation: bounce-pin 0.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px #f87171);
 }
 
 .delivery-details {
@@ -1098,15 +1307,35 @@
 
 .warning-icon {
   font-size: 64px;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 20px;
-  animation: shake 0.5s ease-in-out;
 }
 
-@keyframes shake {
+.warning-svg {
+  width: 64px;
+  height: 64px;
+  stroke: #fbbf24;
+  animation: shake-warning 0.6s ease-in-out;
+}
+
+@keyframes shake-warning {
   0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-10deg); }
-  75% { transform: rotate(10deg); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(12deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(8deg); }
+}
+
+.delete-modal:hover .warning-svg {
+  animation: pulse-warning 1s ease-in-out infinite;
+  filter: drop-shadow(0 0 10px #fbbf24);
+}
+
+@keyframes pulse-warning {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
 .delete-warning p {
