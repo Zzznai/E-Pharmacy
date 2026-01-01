@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import Login from './components/Login'
 import SignUp from './components/SignUp'
 import AdminDashboard from './components/AdminDashboard'
@@ -11,11 +11,25 @@ import OrderManagement from './components/OrderManagement'
 import UserDashboard from './components/UserDashboard'
 import './App.css'
 
+// Component to handle home route based on user role
+function HomeRedirect() {
+  const userRole = localStorage.getItem('userRole');
+  const token = localStorage.getItem('token');
+  
+  // If admin is logged in, redirect to admin dashboard
+  if (token && userRole === 'Administrator') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  // Otherwise show user dashboard (shop)
+  return <UserDashboard />;
+}
+
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<UserDashboard />} />
+        <Route path="/" element={<HomeRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/dashboard" element={<AdminDashboard />} />

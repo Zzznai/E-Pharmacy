@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -10,6 +11,9 @@ using EPharmacy.Common.Entities;
 using EPharmacy.Common.Persistence;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Services;
+
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 

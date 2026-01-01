@@ -86,20 +86,27 @@ export const authService = {
   },
 
   getToken() {
-    return localStorage.getItem('token');
-  },
-
-  isAuthenticated() {
-    const token = this.getToken();
+    // Check if token is expired before returning it
+    const token = localStorage.getItem('token');
     const expiry = localStorage.getItem('tokenExpiry');
     
     if (!token || !expiry) {
-      return false;
+      return null;
     }
 
     // Check if token is expired
     const expiryDate = new Date(expiry);
-    return expiryDate > new Date();
+    if (expiryDate <= new Date()) {
+      // Token expired, clear all auth data
+      this.logout();
+      return null;
+    }
+    
+    return token;
+  },
+
+  isAuthenticated() {
+    return this.getToken() !== null;
   },
 
   getUserInfo() {

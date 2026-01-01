@@ -5,6 +5,7 @@ import { categoryService } from '../services/categoryService';
 import { orderService } from '../services/orderService';
 import { userService } from '../services/userService';
 import { ingredientService } from '../services/ingredientService';
+import { authService } from '../services/authService';
 import './UserDashboard.css';
 
 // Base color palette for categories (same as CategoryManagement)
@@ -105,8 +106,8 @@ function UserDashboard() {
       setProducts(productsData);
       setCategories(categoriesData);
       
-      // Get user info
-      const token = localStorage.getItem('token');
+      // Get user info only if authenticated (token valid and not expired)
+      const token = authService.getToken();
       if (token) {
         try {
           const userData = await userService.getProfile();
@@ -114,7 +115,13 @@ function UserDashboard() {
           setProfileForm({ firstName: userData.firstName || '', lastName: userData.lastName || '' });
         } catch (err) {
           console.error('Failed to get user info:', err);
+          // If API call fails (e.g., 401), clear auth state
+          authService.logout();
+          setUserInfo(null);
         }
+      } else {
+        // No valid token, ensure user info is cleared
+        setUserInfo(null);
       }
     } catch (err) {
       console.error('Failed to fetch data:', err);
@@ -305,11 +312,7 @@ function UserDashboard() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('tokenExpiry');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userId');
-    localStorage.removeItem('basket');
+    authService.logout();
     setUserInfo(null);
     setBasket([]);
     setShowProfile(false);

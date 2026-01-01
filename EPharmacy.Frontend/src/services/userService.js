@@ -1,11 +1,13 @@
+import { authService } from './authService';
+
 const API_BASE_URL = 'http://localhost:5292/api';
 
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = authService.getToken();
   return {
     'accept': '*/*',
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    'Authorization': token ? `Bearer ${token}` : ''
   };
 };
 
