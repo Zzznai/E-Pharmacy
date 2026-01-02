@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Categories;
@@ -20,18 +21,18 @@ public class CategoriesController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult GetAll()
+    public async Task<IActionResult> GetAll()
     {
-        var items = _categoryService.GetAll();
+        var items = await _categoryService.GetAllAsync();
         var result = items.Select(c => new CategoryResponse(c.Id, c.Name, c.ParentCategoryId, c.Subcategories.Select(s => s.Id).ToList()));
         return Ok(result);
     }
 
     [HttpGet("{id}")]
     [AllowAnonymous]
-    public IActionResult GetById(int id)
+    public async Task<IActionResult> GetById(int id)
     {
-        var category = _categoryService.GetById(id);
+        var category = await _categoryService.GetByIdAsync(id);
         if (category == null) return NotFound();
 
         return Ok(new CategoryResponse(category.Id, category.Name, category.ParentCategoryId, category.Subcategories.Select(s => s.Id).ToList()));
@@ -39,38 +40,38 @@ public class CategoriesController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Post([FromBody] CategoryCreateDto dto)
+    public async Task<IActionResult> Post([FromBody] CategoryCreateDto dto)
     {
-        if (dto.ParentCategoryId.HasValue && _categoryService.GetById(dto.ParentCategoryId.Value) == null)
+        if (dto.ParentCategoryId.HasValue && await _categoryService.GetByIdAsync(dto.ParentCategoryId.Value) == null)
             return BadRequest("Parent category not found.");
 
         var category = new Category { Name = dto.Name, ParentCategoryId = dto.ParentCategoryId };
-        _categoryService.Save(category);
+        await _categoryService.SaveAsync(category);
 
         return CreatedAtAction(nameof(GetById), new { id = category.Id }, new CategoryResponse(category.Id, category.Name, category.ParentCategoryId, new List<int>()));
     }
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Put(int id, [FromBody] CategoryUpdateDto dto)
+    public async Task<IActionResult> Put(int id, [FromBody] CategoryUpdateDto dto)
     {
-        var category = _categoryService.GetById(id);
+        var category = await _categoryService.GetByIdAsync(id);
         if (category == null) return NotFound();
 
         category.Name = dto.Name;
         category.ParentCategoryId = dto.ParentCategoryId;
-        _categoryService.Save(category);
+        await _categoryService.SaveAsync(category);
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
-        var category = _categoryService.GetById(id);
+        var category = await _categoryService.GetByIdAsync(id);
         if (category == null) return NotFound();
 
-        _categoryService.Delete(category);
+        await _categoryService.DeleteAsync(category);
         return NoContent();
     }
 }

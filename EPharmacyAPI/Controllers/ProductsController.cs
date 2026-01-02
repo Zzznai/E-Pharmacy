@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Products;
@@ -34,9 +35,9 @@ public class ProductsController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult GetAll()
+    public async Task<IActionResult> GetAll()
     {
-        var products = _productService.GetAllWithDetails();
+        var products = await _productService.GetAllWithDetailsAsync();
         var result = products.Select(p => new ProductResponseDto(
             p.Id,
             p.Name,
@@ -55,9 +56,9 @@ public class ProductsController : ControllerBase
 
     [HttpGet("{id}")]
     [AllowAnonymous]
-    public IActionResult GetById(int id)
+    public async Task<IActionResult> GetById(int id)
     {
-        var product = _productService.GetWithDetails(id);
+        var product = await _productService.GetWithDetailsAsync(id);
         if (product == null) return NotFound();
 
         return Ok(new ProductResponseDto(
@@ -113,21 +114,21 @@ public class ProductsController : ControllerBase
         }
 
         // validate categories exist
-        var categories = _categoryService.GetAll(c => categoryIds.Contains(c.Id));
+        var categories = await _categoryService.GetAllAsync(c => categoryIds.Contains(c.Id));
         if (categories.Count != categoryIds.Count)
             return BadRequest("One or more categories were not found.");
 
         // expand to include all parent categories
-        var expandedCategoryIds = ExpandCategoryIdsWithAncestors(categoryIds);
+        var expandedCategoryIds = await ExpandCategoryIdsWithAncestorsAsync(categoryIds);
 
         // validate ingredients exist
         var ingredientIds = ingredientDtos.Select(i => i.IngredientId).ToList();
-        var foundIngredients = _ingredientService.GetAll(i => ingredientIds.Contains(i.Id));
+        var foundIngredients = await _ingredientService.GetAllAsync(i => ingredientIds.Contains(i.Id));
         if (foundIngredients.Count != ingredientIds.Count)
             return BadRequest("One or more ingredients were not found.");
 
         // validate brand if provided
-        if (dto.BrandId.HasValue && _brandService.GetById(dto.BrandId.Value) == null)
+        if (dto.BrandId.HasValue && await _brandService.GetByIdAsync(dto.BrandId.Value) == null)
             return BadRequest("Brand not found.");
 
         // Upload image to Cloudinary if provided
@@ -158,7 +159,7 @@ public class ProductsController : ControllerBase
             Unit = i.Unit
         }).ToList();
 
-        _productService.SaveWithDetails(product, expandedCategoryIds, productIngredients);
+        await _productService.SaveWithDetailsAsync(product, expandedCategoryIds, productIngredients);
 
         return CreatedAtAction(nameof(GetById), new { id = product.Id }, new ProductResponseDto(
             product.Id,
@@ -169,7 +170,7 @@ public class ProductsController : ControllerBase
             product.Description,
             product.IsPrescriptionRequired,
             product.BrandId,
-            dto.BrandId.HasValue ? _brandService.GetById(dto.BrandId.Value)?.Name : null,
+            dto.BrandId.HasValue ? (await _brandService.GetByIdAsync(dto.BrandId.Value))?.Name : null,
             expandedCategoryIds.ToList(),
             productIngredients.Select(pi => new IngredientLineResponseDto(pi.IngredientId, foundIngredients.First(f => f.Id == pi.IngredientId).Name, pi.Amount, pi.Unit)).ToList()
         ));
@@ -179,7 +180,7 @@ public class ProductsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Update(int id, [FromForm] ProductUpdateFormDto dto)
     {
-        var product = _productService.GetWithDetails(id);
+        var product = await _productService.GetWithDetailsAsync(id);
         if (product == null) return NotFound();
 
         // Validate prescription products
@@ -213,19 +214,19 @@ public class ProductsController : ControllerBase
 
         var categoryIds = dto.CategoryIds ?? new List<int>();
 
-        var categories = _categoryService.GetAll(c => categoryIds.Contains(c.Id));
+        var categories = await _categoryService.GetAllAsync(c => categoryIds.Contains(c.Id));
         if (categories.Count != categoryIds.Count)
             return BadRequest("One or more categories were not found.");
 
         // expand to include all parent categories
-        var expandedCategoryIds = ExpandCategoryIdsWithAncestors(categoryIds);
+        var expandedCategoryIds = await ExpandCategoryIdsWithAncestorsAsync(categoryIds);
 
         var ingredientIds = ingredientDtos.Select(i => i.IngredientId).ToList();
-        var foundIngredients = _ingredientService.GetAll(i => ingredientIds.Contains(i.Id));
+        var foundIngredients = await _ingredientService.GetAllAsync(i => ingredientIds.Contains(i.Id));
         if (foundIngredients.Count != ingredientIds.Count)
             return BadRequest("One or more ingredients were not found.");
 
-        if (dto.BrandId.HasValue && _brandService.GetById(dto.BrandId.Value) == null)
+        if (dto.BrandId.HasValue && await _brandService.GetByIdAsync(dto.BrandId.Value) == null)
             return BadRequest("Brand not found.");
 
         // Handle image update
@@ -264,7 +265,7 @@ public class ProductsController : ControllerBase
 
         product.BrandId = dto.BrandId;
 
-        _productService.SaveWithDetails(product, expandedCategoryIds, productIngredients);
+        await _productService.SaveWithDetailsAsync(product, expandedCategoryIds, productIngredients);
         return NoContent();
     }
 
@@ -272,7 +273,7 @@ public class ProductsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Delete(int id)
     {
-        var product = _productService.GetById(id);
+        var product = await _productService.GetByIdAsync(id);
         if (product == null) return NotFound();
 
         // Delete image from Cloudinary if exists
@@ -281,15 +282,15 @@ public class ProductsController : ControllerBase
             await _cloudinaryService.DeleteImageAsync(_cloudinaryService.GetPublicIdFromUrl(product.PhotoUrl));
         }
 
-        _productService.Delete(product);
+        await _productService.DeleteAsync(product);
         return NoContent();
     }
 
     [HttpPatch("{id}/quantity")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult SetQuantity(int id, [FromBody] int availableQuantity)
+    public async Task<IActionResult> SetQuantity(int id, [FromBody] int availableQuantity)
     {
-        var product = _productService.GetById(id);
+        var product = await _productService.GetByIdAsync(id);
         if (product == null) return NotFound();
         
         if (product.IsPrescriptionRequired) 
@@ -298,21 +299,21 @@ public class ProductsController : ControllerBase
         if (availableQuantity < 0) return BadRequest("Quantity cannot be negative.");
 
         product.AvailableQuantity = availableQuantity;
-        _productService.Save(product);
+        await _productService.SaveAsync(product);
         return NoContent();
     }
 
-    private HashSet<int> ExpandCategoryIdsWithAncestors(IEnumerable<int> categoryIds)
+    private async Task<HashSet<int>> ExpandCategoryIdsWithAncestorsAsync(IEnumerable<int> categoryIds)
     {
         var expanded = new HashSet<int>(categoryIds);
         foreach (var cid in categoryIds)
         {
-            var current = _categoryService.GetById(cid);
+            var current = await _categoryService.GetByIdAsync(cid);
             while (current?.ParentCategoryId is int parentId)
             {
                 if (!expanded.Add(parentId))
                     break; // already visited, prevent infinite loops
-                current = _categoryService.GetById(parentId);
+                current = await _categoryService.GetByIdAsync(parentId);
             }
         }
         return expanded;

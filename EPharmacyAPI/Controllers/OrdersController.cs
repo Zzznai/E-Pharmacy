@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Orders;
@@ -25,9 +26,9 @@ public class OrdersController : ControllerBase
     // Admin: Get top selling products
     [HttpGet("top-products")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult GetTopProducts([FromQuery] int count = 5)
+    public async Task<IActionResult> GetTopProducts([FromQuery] int count = 5)
     {
-        var orders = _orderService.GetAll();
+        var orders = await _orderService.GetAllAsync();
         var productCounts = orders
             .Where(o => o.OrderItems != null)
             .SelectMany(o => o.OrderItems!)
@@ -49,9 +50,9 @@ public class OrdersController : ControllerBase
     // Admin: Get all orders
     [HttpGet]
     [Authorize(Roles = "Administrator")]
-    public IActionResult GetAll()
+    public async Task<IActionResult> GetAll()
     {
-        var orders = _orderService.GetAll();
+        var orders = await _orderService.GetAllAsync();
         var result = orders.Select(o => new OrderListDto
         {
             Id = o.Id,
@@ -72,14 +73,14 @@ public class OrdersController : ControllerBase
     // Customer: Get my orders
     [HttpGet("my-orders")]
     [Authorize]
-    public IActionResult GetMyOrders()
+    public async Task<IActionResult> GetMyOrders()
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
             ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
         
         if (!int.TryParse(userIdClaim, out var userId)) return Unauthorized();
 
-        var orders = _orderService.GetAll(o => o.UserId == userId);
+        var orders = await _orderService.GetAllAsync(o => o.UserId == userId);
         var result = orders.Select(o => new OrderListDto
         {
             Id = o.Id,
@@ -100,9 +101,9 @@ public class OrdersController : ControllerBase
     // Admin: Get order details
     [HttpGet("{id}")]
     [Authorize]
-    public IActionResult GetById(int id)
+    public async Task<IActionResult> GetById(int id)
     {
-        var order = _orderService.GetById(id);
+        var order = await _orderService.GetByIdAsync(id);
         if (order == null) return NotFound();
 
         // Check if user is admin or owns this order
@@ -147,9 +148,9 @@ public class OrdersController : ControllerBase
     // Admin: Update order status
     [HttpPatch("{id}/status")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult UpdateStatus(int id, [FromBody] UpdateOrderStatusDto dto)
+    public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusDto dto)
     {
-        var order = _orderService.GetById(id);
+        var order = await _orderService.GetByIdAsync(id);
         if (order == null) return NotFound();
 
         if (!Enum.TryParse<OrderStatus>(dto.Status, true, out var newStatus))
@@ -197,7 +198,7 @@ public class OrdersController : ControllerBase
         }
 
         order.Status = newStatus;
-        _orderService.Save(order);
+        await _orderService.SaveAsync(order);
 
         return Ok(new { message = "Order status updated successfully", status = order.Status.ToString() });
     }
@@ -205,18 +206,18 @@ public class OrdersController : ControllerBase
     // Admin: Delete order
     [HttpDelete("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
-        var order = _orderService.GetById(id);
+        var order = await _orderService.GetByIdAsync(id);
         if (order == null) return NotFound();
 
-        _orderService.Delete(order);
+        await _orderService.DeleteAsync(order);
         return Ok(new { message = "Order deleted successfully" });
     }
 
     [HttpPost]
     [Authorize]
-    public IActionResult Create([FromBody] OrderCreateDto dto)
+    public async Task<IActionResult> Create([FromBody] OrderCreateDto dto)
     {
         var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
         if (string.Equals(role, UserRoles.Administrator.ToString(), StringComparison.OrdinalIgnoreCase))
@@ -237,7 +238,7 @@ public class OrdersController : ControllerBase
         {
             if (item.Quantity <= 0) return BadRequest("Quantity must be greater than zero.");
 
-            var product = _productService.GetById(item.ProductId);
+            var product = await _productService.GetByIdAsync(item.ProductId);
             if (product == null) return NotFound($"Product {item.ProductId} not found.");
             if (product.IsPrescriptionRequired) return BadRequest("Prescription products cannot be ordered online.");
             if (product.AvailableQuantity < item.Quantity) 
@@ -261,7 +262,7 @@ public class OrdersController : ControllerBase
 
             // Reduce available quantity
             product.AvailableQuantity -= quantity;
-            _productService.Save(product);
+            await _productService.SaveAsync(product);
         }
 
         var order = new Order
@@ -278,7 +279,7 @@ public class OrdersController : ControllerBase
             OrderItems = orderItems
         };
 
-        _orderService.Save(order);
+        await _orderService.SaveAsync(order);
 
         return Ok(new OrderResponseDto(order.Id, order.TotalPrice, order.Status.ToString()));
     }

@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Brands;
@@ -20,48 +21,48 @@ public class BrandsController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult GetAll()
+    public async Task<IActionResult> GetAll()
     {
-        var items = _brandService.GetAll();
+        var items = await _brandService.GetAllAsync();
         return Ok(items.Select(b => new BrandResponse(b.Id, b.Name)));
     }
 
     [HttpGet("{id}")]
     [AllowAnonymous]
-    public IActionResult GetById(int id)
+    public async Task<IActionResult> GetById(int id)
     {
-        var brand = _brandService.GetById(id);
+        var brand = await _brandService.GetByIdAsync(id);
         if (brand == null) return NotFound();
         return Ok(new BrandResponse(brand.Id, brand.Name));
     }
 
     [HttpPost]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Post([FromBody] BrandCreateDto dto)
+    public async Task<IActionResult> Post([FromBody] BrandCreateDto dto)
     {
         var brand = new Brand { Name = dto.Name };
-        _brandService.Save(brand);
+        await _brandService.SaveAsync(brand);
         return CreatedAtAction(nameof(GetById), new { id = brand.Id }, new BrandResponse(brand.Id, brand.Name));
     }
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Put(int id, [FromBody] BrandUpdateDto dto)
+    public async Task<IActionResult> Put(int id, [FromBody] BrandUpdateDto dto)
     {
-        var brand = _brandService.GetById(id);
+        var brand = await _brandService.GetByIdAsync(id);
         if (brand == null) return NotFound();
         brand.Name = dto.Name;
-        _brandService.Save(brand);
+        await _brandService.SaveAsync(brand);
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
-        var brand = _brandService.GetById(id);
+        var brand = await _brandService.GetByIdAsync(id);
         if (brand == null) return NotFound();
-        _brandService.Delete(brand);
+        await _brandService.DeleteAsync(brand);
         return NoContent();
     }
 }

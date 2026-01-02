@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Persistence;
@@ -12,33 +13,33 @@ public class ProductService : BaseService<Product>
     {
     }
 
-    public List<Product> GetAllWithDetails()
+    public async Task<List<Product>> GetAllWithDetailsAsync()
     {
-        return Context.Products
+        return await Context.Products
             .Include(p => p.Brand)
             .Include(p => p.Categories)
             .Include(p => p.ProductIngredients)
                 .ThenInclude(pi => pi.Ingredient)
-            .ToList();
+            .ToListAsync();
     }
 
-    public Product? GetWithDetails(int id)
+    public async Task<Product?> GetWithDetailsAsync(int id)
     {
-        return Context.Products
+        return await Context.Products
             .Include(p => p.Brand)
             .Include(p => p.Categories)
             .Include(p => p.ProductIngredients)
                 .ThenInclude(pi => pi.Ingredient)
-            .FirstOrDefault(p => p.Id == id);
+            .FirstOrDefaultAsync(p => p.Id == id);
     }
 
-    public void SaveWithDetails(Product product, IEnumerable<int> categoryIds, IEnumerable<ProductIngredient> ingredients)
+    public async Task SaveWithDetailsAsync(Product product, IEnumerable<int> categoryIds, IEnumerable<ProductIngredient> ingredients)
     {
         if (product.Id > 0)
         {
             // For existing products, load collections to clear/update
-            Context.Entry(product).Collection(p => p.Categories).Load();
-            Context.Entry(product).Collection(p => p.ProductIngredients).Load();
+            await Context.Entry(product).Collection(p => p.Categories).LoadAsync();
+            await Context.Entry(product).Collection(p => p.ProductIngredients).LoadAsync();
             
             product.Categories.Clear();
             Context.ProductIngredients.RemoveRange(product.ProductIngredients);
@@ -50,7 +51,7 @@ public class ProductService : BaseService<Product>
         // If product is a prescription drug, ensure it's assigned to "Prescription drugs" category
         if (product.IsPrescriptionRequired)
         {
-            var prescriptionCategory = Context.Categories.FirstOrDefault(c => c.Name == "Prescription drugs");
+            var prescriptionCategory = await Context.Categories.FirstOrDefaultAsync(c => c.Name == "Prescription drugs");
             if (prescriptionCategory != null && !categoryIdsList.Contains(prescriptionCategory.Id))
             {
                 categoryIdsList.Add(prescriptionCategory.Id);
@@ -59,7 +60,7 @@ public class ProductService : BaseService<Product>
             product.AvailableQuantity = 0;
         }
 
-        var categories = Context.Categories.Where(c => categoryIdsList.Contains(c.Id)).ToList();
+        var categories = await Context.Categories.Where(c => categoryIdsList.Contains(c.Id)).ToListAsync();
         foreach (var cat in categories)
             product.Categories.Add(cat);
 
@@ -75,26 +76,26 @@ public class ProductService : BaseService<Product>
         else
             Context.Products.Add(product);
 
-        Context.SaveChanges();
+        await Context.SaveChangesAsync();
     }
 
     // Provide cascade delete behavior when removing a product.
     // This hides the base Delete method to perform extra cleanup of
     // related ProductIngredient entries and their Ingredients.
-    public new void Delete(Product product)
+    public new async Task DeleteAsync(Product product)
     {
         if (product == null) return;
 
         // Find product-ingredient join rows using the shadow FK "ProductId"
-        var related = Context.ProductIngredients
+        var related = await Context.ProductIngredients
             .Where(pi => EF.Property<int>(pi, "ProductId") == product.Id)
-            .ToList();
+            .ToListAsync();
 
         foreach (var pi in related)
         {
             if (pi.IngredientId > 0)
             {
-                var ingredient = Context.Ingredients.FirstOrDefault(i => i.Id == pi.IngredientId);
+                var ingredient = await Context.Ingredients.FirstOrDefaultAsync(i => i.Id == pi.IngredientId);
                 if (ingredient != null)
                     Context.Ingredients.Remove(ingredient);
             }
@@ -103,6 +104,6 @@ public class ProductService : BaseService<Product>
         }
 
         Context.Products.Remove(product);
-        Context.SaveChanges();
+        await Context.SaveChangesAsync();
     }
 }

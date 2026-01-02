@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Persistence;
@@ -20,7 +21,7 @@ public class BaseService<T>
         Items = Context.Set<T>();
     }
 
-    public List<T> GetAll(Expression<Func<T, bool>>? filter = null, string? orderBy = null, bool sortAsc = false, int page = 1, int pageSize = int.MaxValue)
+    public async Task<List<T>> GetAllAsync(Expression<Func<T, bool>>? filter = null, string? orderBy = null, bool sortAsc = false, int page = 1, int pageSize = int.MaxValue)
     {
         var query = Items.AsQueryable();
         if (filter != null)
@@ -38,36 +39,36 @@ public class BaseService<T>
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize);
 
-        return query.ToList();
+        return await query.ToListAsync();
     }
 
-    public int Count(Expression<Func<T, bool>>? filter = null)
+    public async Task<int> CountAsync(Expression<Func<T, bool>>? filter = null)
     {
         var query = Items.AsQueryable();
         if (filter != null)
             query = query.Where(filter);
 
-        return query.Count();
+        return await query.CountAsync();
     }
 
-    public T? GetById(int id)
+    public async Task<T?> GetByIdAsync(int id)
     {
-        return Items.FirstOrDefault(u => u.Id == id);
+        return await Items.FirstOrDefaultAsync(u => u.Id == id);
     }
 
-    public void Save(T item)
+    public async Task SaveAsync(T item)
     {
         if (item.Id > 0)
             Items.Update(item);
         else
             Items.Add(item);
 
-        Context.SaveChanges();
+        await Context.SaveChangesAsync();
     }
 
-    public void Delete(T item)
+    public async Task DeleteAsync(T item)
     {
         Items.Remove(item);
-        Context.SaveChanges();
+        await Context.SaveChangesAsync();
     }
 }

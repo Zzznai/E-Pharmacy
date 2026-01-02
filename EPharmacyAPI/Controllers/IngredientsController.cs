@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Ingredients;
@@ -20,17 +21,17 @@ public class IngredientsController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public IActionResult GetAll()
+    public async Task<IActionResult> GetAll()
     {
-        var items = _ingredientService.GetAll();
+        var items = await _ingredientService.GetAllAsync();
         return Ok(items.Select(i => new IngredientResponse(i.Id, i.Name, i.Description, i.IsActiveSubstance)));
     }
 
     [HttpGet("{id}")]
     [AllowAnonymous]
-    public IActionResult GetById(int id)
+    public async Task<IActionResult> GetById(int id)
     {
-        var ingredient = _ingredientService.GetById(id);
+        var ingredient = await _ingredientService.GetByIdAsync(id);
         if (ingredient == null) return NotFound();
 
         return Ok(new IngredientResponse(ingredient.Id, ingredient.Name, ingredient.Description, ingredient.IsActiveSubstance));
@@ -38,7 +39,7 @@ public class IngredientsController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Post([FromBody] IngredientCreateDto dto)
+    public async Task<IActionResult> Post([FromBody] IngredientCreateDto dto)
     {
         var ingredient = new Ingredient
         {
@@ -47,33 +48,33 @@ public class IngredientsController : ControllerBase
             IsActiveSubstance = dto.IsActiveSubstance
         };
 
-        _ingredientService.Save(ingredient);
+        await _ingredientService.SaveAsync(ingredient);
         return CreatedAtAction(nameof(GetById), new { id = ingredient.Id }, new IngredientResponse(ingredient.Id, ingredient.Name, ingredient.Description, ingredient.IsActiveSubstance));
     }
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Put(int id, [FromBody] IngredientUpdateDto dto)
+    public async Task<IActionResult> Put(int id, [FromBody] IngredientUpdateDto dto)
     {
-        var ingredient = _ingredientService.GetById(id);
+        var ingredient = await _ingredientService.GetByIdAsync(id);
         if (ingredient == null) return NotFound();
 
         ingredient.Name = dto.Name;
         ingredient.Description = dto.Description;
         ingredient.IsActiveSubstance = dto.IsActiveSubstance;
 
-        _ingredientService.Save(ingredient);
+        await _ingredientService.SaveAsync(ingredient);
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
-        var ingredient = _ingredientService.GetById(id);
+        var ingredient = await _ingredientService.GetByIdAsync(id);
         if (ingredient == null) return NotFound();
 
-        _ingredientService.Delete(ingredient);
+        await _ingredientService.DeleteAsync(ingredient);
         return NoContent();
     }
 }

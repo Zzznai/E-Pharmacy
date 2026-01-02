@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Persistence;
@@ -11,12 +12,12 @@ public class CategoryService : BaseService<Category>
     }
 
     // Ensure deleting a category detaches related products and re-parents children.
-    public new void Delete(Category category)
+    public new async Task DeleteAsync(Category category)
     {
         if (category == null) return;
 
-        Context.Entry(category).Collection(c => c.Products).Load();
-        Context.Entry(category).Collection(c => c.Subcategories).Load();
+        await Context.Entry(category).Collection(c => c.Products).LoadAsync();
+        await Context.Entry(category).Collection(c => c.Subcategories).LoadAsync();
 
         // Detach products
         category.Products.Clear();
@@ -29,6 +30,6 @@ public class CategoryService : BaseService<Category>
         }
 
         Context.Categories.Remove(category);
-        Context.SaveChanges();
+        await Context.SaveChangesAsync();
     }
 }

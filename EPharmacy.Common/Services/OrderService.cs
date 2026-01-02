@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using System.Linq.Expressions;
+using System.Threading.Tasks;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -10,22 +13,26 @@ public class OrderService : BaseService<Order>
     {
     }
 
-    public new List<Order> GetAll()
+    public new async Task<List<Order>> GetAllAsync(Expression<System.Func<Order, bool>>? filter = null, string? orderBy = null, bool sortAsc = false, int page = 1, int pageSize = int.MaxValue)
     {
-        return Items
+        var query = Items
             .Include(o => o.User)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
-            .OrderByDescending(o => o.OrderDate)
-            .ToList();
+            .AsQueryable();
+
+        if (filter != null)
+            query = query.Where(filter);
+
+        return await query.OrderByDescending(o => o.OrderDate).ToListAsync();
     }
 
-    public new Order? GetById(int id)
+    public new async Task<Order?> GetByIdAsync(int id)
     {
-        return Items
+        return await Items
             .Include(o => o.User)
             .Include(o => o.OrderItems)
                 .ThenInclude(oi => oi.Product)
-            .FirstOrDefault(o => o.Id == id);
+            .FirstOrDefaultAsync(o => o.Id == id);
     }
 }

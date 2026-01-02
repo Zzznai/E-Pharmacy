@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Users;
@@ -26,23 +27,23 @@ public class UserController : ControllerBase
     
     [HttpGet]
     [Authorize(Roles = "Administrator")]
-    public IActionResult GetAll()
+    public async Task<IActionResult> GetAll()
     {
-        var users = _userService.GetAll();
+        var users = await _userService.GetAllAsync();
         var result = users.Select(u => new UserResponse(u.Id, u.Username, u.FirstName, u.LastName, u.Role.ToString()));
         return Ok(result);
     }
 
     [HttpGet("profile")]
     [Authorize]
-    public IActionResult GetProfile()
+    public async Task<IActionResult> GetProfile()
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
             ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
         
         if (!int.TryParse(userIdClaim, out var userId)) return Unauthorized();
 
-        var user = _userService.GetById(userId);
+        var user = await _userService.GetByIdAsync(userId);
         if (user == null) return NotFound();
 
         return Ok(new UserResponse(user.Id, user.Username, user.FirstName, user.LastName, user.Role.ToString()));
@@ -50,9 +51,9 @@ public class UserController : ControllerBase
 
     [HttpGet("{id}")]
     [Authorize]
-    public IActionResult GetById(int id)
+    public async Task<IActionResult> GetById(int id)
     {
-        var user = _userService.GetById(id);
+        var user = await _userService.GetByIdAsync(id);
         if (user == null) return NotFound();
 
         var callerIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
@@ -65,12 +66,12 @@ public class UserController : ControllerBase
 
     [HttpPost]
     [AllowAnonymous]
-    public IActionResult Create([FromBody] CreateUserDto dto)
+    public async Task<IActionResult> Create([FromBody] CreateUserDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Username) || string.IsNullOrWhiteSpace(dto.Password))
             return BadRequest("Username and password are required.");
 
-        var existing = _userService.GetAll(u => u.Username == dto.Username).FirstOrDefault();
+        var existing = (await _userService.GetAllAsync(u => u.Username == dto.Username)).FirstOrDefault();
         if (existing != null) return Conflict("Username already taken.");
 
         var user = new User
@@ -82,16 +83,16 @@ public class UserController : ControllerBase
         };
         var hasher = new PasswordHasher<User>();
         user.PasswordHash = hasher.HashPassword(user, dto.Password);
-        _userService.Save(user);
+        await _userService.SaveAsync(user);
         return CreatedAtAction(nameof(GetById), new { id = user.Id }, new UserResponse(user.Id, user.Username, user.FirstName, user.LastName, user.Role.ToString()));
     }
 
     [HttpPost("create-admin")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult AddAdmin([FromBody] CreateUserDto dto)
+    public async Task<IActionResult> AddAdmin([FromBody] CreateUserDto dto)
     {
         if (!User.IsInRole("Administrator")) return Forbid();
-        var existing = _userService.GetAll(u => u.Username == dto.Username).FirstOrDefault();
+        var existing = (await _userService.GetAllAsync(u => u.Username == dto.Username)).FirstOrDefault();
         if (existing != null) return Conflict("Username already taken.");
 
         var user = new User
@@ -103,15 +104,15 @@ public class UserController : ControllerBase
         };
         var hasher = new PasswordHasher<User>();
         user.PasswordHash = hasher.HashPassword(user, dto.Password);
-        _userService.Save(user);
+        await _userService.SaveAsync(user);
         return CreatedAtAction(nameof(GetById), new { id = user.Id }, new UserResponse(user.Id, user.Username, user.FirstName, user.LastName, user.Role.ToString()));
     }
 
     [HttpPut("{id}")]
     [Authorize]
-    public IActionResult Update(int id, [FromBody] UpdateUserDto dto)
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto dto)
     {
-        var user = _userService.GetById(id);
+        var user = await _userService.GetByIdAsync(id);
         if (user == null) return NotFound();
 
         var callerIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
@@ -120,25 +121,25 @@ public class UserController : ControllerBase
 
         user.FirstName = dto.FirstName;
         user.LastName = dto.LastName;
-        _userService.Save(user);
+        await _userService.SaveAsync(user);
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     [Authorize(Roles = "Administrator")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
-        var user = _userService.GetById(id);
+        var user = await _userService.GetByIdAsync(id);
         if (user == null) return NotFound();
-        _userService.Delete(user);
+        await _userService.DeleteAsync(user);
         return NoContent();
     }
 
     [HttpPost("{id}/change-password")]
     [Authorize]
-    public IActionResult ChangePassword(int id, [FromBody] ChangePasswordDto dto)
+    public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDto dto)
     {
-        var user = _userService.GetById(id);
+        var user = await _userService.GetByIdAsync(id);
         if (user == null) return NotFound();
 
         var callerIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
@@ -151,7 +152,7 @@ public class UserController : ControllerBase
             return Unauthorized();
 
         user.PasswordHash = hasher.HashPassword(user, dto.NewPassword);
-        _userService.Save(user);
+        await _userService.SaveAsync(user);
         return NoContent();
     }
 }

@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Auth;
@@ -22,9 +23,9 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("token")]
-    public IActionResult GetToken([FromBody] UserLoginDto dto)
+    public async Task<IActionResult> GetToken([FromBody] UserLoginDto dto)
     {
-        var users = _userService.GetAll(u => u.Username == dto.Username);
+        var users = await _userService.GetAllAsync(u => u.Username == dto.Username);
         var user = users.FirstOrDefault();
         if (user == null)
             return Unauthorized();
