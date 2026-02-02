@@ -24,6 +24,7 @@ public class BrandsController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var items = await _brandService.GetAllAsync();
+
         return Ok(items.Select(b => new BrandResponse(b.Id, b.Name)));
     }
 
@@ -32,7 +33,12 @@ public class BrandsController : ControllerBase
     public async Task<IActionResult> GetById(int id)
     {
         var brand = await _brandService.GetByIdAsync(id);
-        if (brand == null) return NotFound();
+
+        if (brand == null)
+        {
+            return NotFound();
+        }
+
         return Ok(new BrandResponse(brand.Id, brand.Name));
     }
 
@@ -41,8 +47,14 @@ public class BrandsController : ControllerBase
     public async Task<IActionResult> Post([FromBody] BrandCreateDto dto)
     {
         var brand = new Brand { Name = dto.Name };
+
         await _brandService.SaveAsync(brand);
-        return CreatedAtAction(nameof(GetById), new { id = brand.Id }, new BrandResponse(brand.Id, brand.Name));
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = brand.Id },
+            new BrandResponse(brand.Id, brand.Name)
+        );
     }
 
     [HttpPut("{id}")]
@@ -50,9 +62,16 @@ public class BrandsController : ControllerBase
     public async Task<IActionResult> Put(int id, [FromBody] BrandUpdateDto dto)
     {
         var brand = await _brandService.GetByIdAsync(id);
-        if (brand == null) return NotFound();
+
+        if (brand == null)
+        {
+            return NotFound();
+        }
+
         brand.Name = dto.Name;
+
         await _brandService.SaveAsync(brand);
+
         return NoContent();
     }
 
@@ -61,8 +80,14 @@ public class BrandsController : ControllerBase
     public async Task<IActionResult> Delete(int id)
     {
         var brand = await _brandService.GetByIdAsync(id);
-        if (brand == null) return NotFound();
+
+        if (brand == null)
+        {
+            return NotFound();
+        }
+
         await _brandService.DeleteAsync(brand);
+
         return NoContent();
     }
 }

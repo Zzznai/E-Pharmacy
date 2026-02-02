@@ -483,9 +483,11 @@
   margin-bottom: 20px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   position: relative;
   z-index: 1;
+  white-space: pre-line;
+  line-height: 1.5;
 }
 
 .error-message button {
@@ -494,6 +496,8 @@
   color: #fca5a5;
   font-size: 20px;
   cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 12px;
 }
 
 /* Modal Styles */
@@ -817,6 +821,8 @@
   border-radius: 10px;
   margin-bottom: 20px;
   font-size: 14px;
+  white-space: pre-line;
+  line-height: 1.5;
 }
 
 .form-row {

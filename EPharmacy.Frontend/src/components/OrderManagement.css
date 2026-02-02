@@ -98,7 +98,9 @@
   margin-bottom: 20px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  white-space: pre-line;
+  line-height: 1.5;
 }
 
 .error-message button {
@@ -109,6 +111,8 @@
   cursor: pointer;
   padding: 0;
   line-height: 1;
+  flex-shrink: 0;
+  margin-left: 12px;
 }
 
 /* Stats Grid */

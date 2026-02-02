@@ -1,38 +1,48 @@
-using System.Collections.Generic;
-using System.Linq.Expressions;
-using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace EPharmacy.Common.Services;
 
-public class OrderService : BaseService<Order>
+public class OrderService
 {
-    public OrderService(ApplicationDbContext context) : base(context)
-    {
-    }
+    private readonly ApplicationDbContext _db;
 
-    public new async Task<List<Order>> GetAllAsync(Expression<System.Func<Order, bool>>? filter = null, string? orderBy = null, bool sortAsc = false, int page = 1, int pageSize = int.MaxValue)
-    {
-        var query = Items
+    public OrderService(ApplicationDbContext db) => _db = db;
+
+    public async Task<List<Order>> GetAllAsync() =>
+        await _db.Orders
             .Include(o => o.User)
-            .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Product)
-            .AsQueryable();
+            .Include(o => o.OrderItems).ThenInclude(oi => oi.Product)
+            .OrderByDescending(o => o.OrderDate)
+            .ToListAsync();
 
-        if (filter != null)
-            query = query.Where(filter);
-
-        return await query.OrderByDescending(o => o.OrderDate).ToListAsync();
-    }
-
-    public new async Task<Order?> GetByIdAsync(int id)
-    {
-        return await Items
+    public async Task<List<Order>> GetByUserIdAsync(int userId) =>
+        await _db.Orders
             .Include(o => o.User)
-            .Include(o => o.OrderItems)
-                .ThenInclude(oi => oi.Product)
+            .Include(o => o.OrderItems).ThenInclude(oi => oi.Product)
+            .Where(o => o.UserId == userId)
+            .OrderByDescending(o => o.OrderDate)
+            .ToListAsync();
+
+    public async Task<Order?> GetByIdAsync(int id) =>
+        await _db.Orders
+            .Include(o => o.User)
+            .Include(o => o.OrderItems).ThenInclude(oi => oi.Product)
             .FirstOrDefaultAsync(o => o.Id == id);
+
+    public async Task SaveAsync(Order order)
+    {
+        if (order.Id == 0)
+            _db.Orders.Add(order);
+        else
+            _db.Orders.Update(order);
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(Order order)
+    {
+        _db.Orders.Remove(order);
+        await _db.SaveChangesAsync();
     }
 }

@@ -1,4 +1,3 @@
-using System.Linq;
 using System.Threading.Tasks;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
@@ -25,21 +24,33 @@ public class AuthController : ControllerBase
     [HttpPost("token")]
     public async Task<IActionResult> GetToken([FromBody] UserLoginDto dto)
     {
-        var users = await _userService.GetAllAsync(u => u.Username == dto.Username);
-        var user = users.FirstOrDefault();
-        if (user == null)
-            return Unauthorized();
+        var user = await _userService.GetByUsernameAsync(dto.Username);
 
-        // verify hashed password
-        var hasher = new PasswordHasher<User>();
-        var verify = hasher.VerifyHashedPassword(user, user.PasswordHash ?? string.Empty, dto.Password);
-        if (verify != PasswordVerificationResult.Success)
+        if (user == null)
+        {
             return Unauthorized();
+        }
+
+        var hasher = new PasswordHasher<User>();
+
+        string passwordHash = string.Empty;
+        if (user.PasswordHash != null)
+        {
+            passwordHash = user.PasswordHash;
+        }
+
+        var verify = hasher.VerifyHashedPassword(user, passwordHash, dto.Password);
+
+        if (verify != PasswordVerificationResult.Success)
+        {
+            return Unauthorized();
+        }
 
         var token = _tokenService.CreateToken(user);
-        return Ok(new AuthResponseDto 
-        { 
-            Token = token, 
+
+        return Ok(new AuthResponseDto
+        {
+            Token = token,
             ExpiresAt = DateTime.UtcNow.AddHours(1),
             Role = user.Role.ToString(),
             UserId = user.Id

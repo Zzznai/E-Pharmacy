@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
+using Microsoft.EntityFrameworkCore;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Persistence;
 using EPharmacy.Common.Services;
@@ -69,8 +70,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// register persistence (ApplicationDbContext) from common project
-builder.Services.AddCommonPersistence(builder.Configuration);
+// register DbContext
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // register services
 builder.Services.AddScoped<UserService>();
@@ -79,7 +81,6 @@ builder.Services.AddScoped<IngredientService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<OrderService>();
-builder.Services.AddScoped<OrderItemService>();
 builder.Services.AddScoped<BrandService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 

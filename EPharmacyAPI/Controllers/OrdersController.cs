@@ -1,5 +1,4 @@
-using System.Linq;
-using System.Threading.Tasks;
+using System.Security.Claims;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Orders;
@@ -14,115 +13,114 @@ public class OrdersController : ControllerBase
 {
     private readonly OrderService _orderService;
     private readonly ProductService _productService;
-    private readonly UserService _userService;
 
-    public OrdersController(OrderService orderService, ProductService productService, UserService userService)
+    public OrdersController(OrderService orderService, ProductService productService)
     {
         _orderService = orderService;
         _productService = productService;
-        _userService = userService;
     }
 
-    // Admin: Get top selling products
     [HttpGet("top-products")]
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetTopProducts([FromQuery] int count = 5)
     {
         var orders = await _orderService.GetAllAsync();
-        var productCounts = orders
-            .Where(o => o.OrderItems != null)
-            .SelectMany(o => o.OrderItems!)
-            .GroupBy(oi => new { oi.ProductId, oi.Product?.Name })
-            .Select(g => new {
-                ProductId = g.Key.ProductId,
-                ProductName = g.Key.Name ?? "Unknown",
-                OrderCount = g.Count(),
+
+        var topProducts = orders
+            .SelectMany(o => o.OrderItems)
+            .Where(oi => oi.Product != null)
+            .GroupBy(oi => new { oi.ProductId, oi.Product!.Name })
+            .Select(g => new
+            {
+                g.Key.ProductId,
+                ProductName = g.Key.Name,
                 TotalQuantity = g.Sum(x => x.Quantity),
                 TotalRevenue = g.Sum(x => x.Quantity * x.UnitPrice)
             })
             .OrderByDescending(x => x.TotalQuantity)
-            .Take(count)
-            .ToList();
+            .Take(count);
 
-        return Ok(productCounts);
+        return Ok(topProducts);
     }
 
-    // Admin: Get all orders
     [HttpGet]
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetAll()
     {
         var orders = await _orderService.GetAllAsync();
-        var result = orders.Select(o => new OrderListDto
-        {
-            Id = o.Id,
-            UserId = o.UserId,
-            UserName = o.User?.FirstName + " " + o.User?.LastName,
-            UserUsername = o.User?.Username ?? "",
-            OrderDate = o.OrderDate,
-            Status = o.Status.ToString(),
-            TotalPrice = o.TotalPrice,
-            ItemCount = o.OrderItems?.Count ?? 0,
-            City = o.City,
-            Province = o.Province
-        }).OrderByDescending(o => o.OrderDate).ToList();
 
-        return Ok(result);
+        return Ok(orders.OrderByDescending(o => o.OrderDate).Select(MapToListDto));
     }
 
-    // Customer: Get my orders
     [HttpGet("my-orders")]
     [Authorize]
     public async Task<IActionResult> GetMyOrders()
     {
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
-            ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-        
-        if (!int.TryParse(userIdClaim, out var userId)) return Unauthorized();
+        var userId = GetUserId();
 
-        var orders = await _orderService.GetAllAsync(o => o.UserId == userId);
-        var result = orders.Select(o => new OrderListDto
+        if (userId == null)
         {
-            Id = o.Id,
-            UserId = o.UserId,
-            UserName = o.User?.FirstName + " " + o.User?.LastName,
-            UserUsername = o.User?.Username ?? "",
-            OrderDate = o.OrderDate,
-            Status = o.Status.ToString(),
-            TotalPrice = o.TotalPrice,
-            ItemCount = o.OrderItems?.Count ?? 0,
-            City = o.City,
-            Province = o.Province
-        }).OrderByDescending(o => o.OrderDate).ToList();
+            return Unauthorized();
+        }
 
-        return Ok(result);
+        var orders = await _orderService.GetByUserIdAsync(userId.Value);
+
+        return Ok(orders.Select(MapToListDto));
     }
 
-    // Admin: Get order details
     [HttpGet("{id}")]
     [Authorize]
     public async Task<IActionResult> GetById(int id)
     {
         var order = await _orderService.GetByIdAsync(id);
-        if (order == null) return NotFound();
 
-        // Check if user is admin or owns this order
-        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
-            ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-        
-        if (!string.Equals(role, UserRoles.Administrator.ToString(), StringComparison.OrdinalIgnoreCase))
+        if (order == null)
         {
-            if (!int.TryParse(userIdClaim, out var userId) || order.UserId != userId)
-                return Forbid();
+            return NotFound();
         }
 
-        var result = new OrderDetailDto
+        if (!IsAdmin() && GetUserId() != order.UserId)
+        {
+            return Forbid();
+        }
+
+        string userName = "";
+        string userUsername = "";
+
+        if (order.User != null)
+        {
+            userName = order.User.FirstName + " " + order.User.LastName;
+            userUsername = order.User.Username;
+        }
+
+        var items = new List<OrderItemDto>();
+
+        foreach (var oi in order.OrderItems)
+        {
+            string productName = "";
+
+            if (oi.Product != null)
+            {
+                productName = oi.Product.Name;
+            }
+
+            items.Add(new OrderItemDto
+            {
+                Id = oi.Id,
+                ProductId = oi.ProductId,
+                ProductName = productName,
+                Quantity = oi.Quantity,
+                UnitPrice = oi.UnitPrice,
+                LineTotal = oi.Quantity * oi.UnitPrice
+            });
+        }
+
+        return Ok(new OrderDetailDto
         {
             Id = order.Id,
             UserId = order.UserId,
-            UserName = order.User?.FirstName + " " + order.User?.LastName,
-            UserUsername = order.User?.Username ?? "",
+            UserName = userName,
+            UserUsername = userUsername,
             OrderDate = order.OrderDate,
             Status = order.Status.ToString(),
             TotalPrice = order.TotalPrice,
@@ -131,143 +129,114 @@ public class OrdersController : ControllerBase
             Province = order.Province,
             PostalCode = order.PostalCode,
             PhoneNumber = order.PhoneNumber,
-            Items = order.OrderItems?.Select(oi => new OrderItemDto
-            {
-                Id = oi.Id,
-                ProductId = oi.ProductId,
-                ProductName = oi.Product?.Name ?? "Unknown",
-                Quantity = oi.Quantity,
-                UnitPrice = oi.UnitPrice,
-                LineTotal = oi.Quantity * oi.UnitPrice
-            }).ToList() ?? new List<OrderItemDto>()
-        };
-
-        return Ok(result);
+            Items = items
+        });
     }
 
-    // Admin: Update order status
     [HttpPatch("{id}/status")]
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusDto dto)
     {
         var order = await _orderService.GetByIdAsync(id);
-        if (order == null) return NotFound();
+
+        if (order == null)
+        {
+            return NotFound();
+        }
 
         if (!Enum.TryParse<OrderStatus>(dto.Status, true, out var newStatus))
+        {
             return BadRequest("Invalid status value.");
-
-        var oldStatus = order.Status;
-
-        // If cancelling an order that wasn't already cancelled, restore stock
-        if (newStatus == OrderStatus.Cancelled && oldStatus != OrderStatus.Cancelled)
-        {
-            if (order.OrderItems != null)
-            {
-                foreach (var item in order.OrderItems)
-                {
-                    // Use the Product already loaded with the order (tracked by EF)
-                    if (item.Product != null)
-                    {
-                        item.Product.AvailableQuantity += item.Quantity;
-                    }
-                }
-            }
         }
-        // If un-cancelling an order (changing from cancelled to another status), reduce stock again
-        else if (oldStatus == OrderStatus.Cancelled && newStatus != OrderStatus.Cancelled)
+
+        if (newStatus == OrderStatus.Cancelled && order.Status != OrderStatus.Cancelled)
         {
-            if (order.OrderItems != null)
+            foreach (var item in order.OrderItems)
             {
-                // First check if we have enough stock
-                foreach (var item in order.OrderItems)
+                if (item.Product != null)
                 {
-                    if (item.Product != null && item.Product.AvailableQuantity < item.Quantity)
-                    {
-                        return BadRequest($"Insufficient stock for {item.Product.Name} to restore this order. Available: {item.Product.AvailableQuantity}");
-                    }
-                }
-                // Then reduce stock
-                foreach (var item in order.OrderItems)
-                {
-                    if (item.Product != null)
-                    {
-                        item.Product.AvailableQuantity -= item.Quantity;
-                    }
+                    item.Product.AvailableQuantity += item.Quantity;
                 }
             }
         }
 
         order.Status = newStatus;
+
         await _orderService.SaveAsync(order);
 
-        return Ok(new { message = "Order status updated successfully", status = order.Status.ToString() });
+        return Ok(new { message = "Order status updated", status = order.Status.ToString() });
     }
 
-    // Admin: Delete order
     [HttpDelete("{id}")]
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Delete(int id)
     {
         var order = await _orderService.GetByIdAsync(id);
-        if (order == null) return NotFound();
+
+        if (order == null)
+        {
+            return NotFound();
+        }
 
         await _orderService.DeleteAsync(order);
-        return Ok(new { message = "Order deleted successfully" });
+
+        return NoContent();
     }
 
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> Create([FromBody] OrderCreateDto dto)
     {
-        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? string.Empty;
-        if (string.Equals(role, UserRoles.Administrator.ToString(), StringComparison.OrdinalIgnoreCase))
-            return Forbid();
-
-        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
-        if (!int.TryParse(userIdClaim, out var userId)) return Unauthorized();
-
-        if (dto.Items == null || dto.Items.Count == 0) return BadRequest("At least one item is required.");
-
-        var orderItems = new List<OrderItem>();
-        decimal total = 0m;
-
-        // First pass: validate all items and check stock
-        var productsToUpdate = new List<(Product product, int quantity)>();
-        
-        foreach (var item in dto.Items)
+        if (IsAdmin())
         {
-            if (item.Quantity <= 0) return BadRequest("Quantity must be greater than zero.");
-
-            var product = await _productService.GetByIdAsync(item.ProductId);
-            if (product == null) return NotFound($"Product {item.ProductId} not found.");
-            if (product.IsPrescriptionRequired) return BadRequest("Prescription products cannot be ordered online.");
-            if (product.AvailableQuantity < item.Quantity) 
-                return BadRequest($"Insufficient stock for {product.Name}. Available: {product.AvailableQuantity}");
-
-            productsToUpdate.Add((product, item.Quantity));
+            return Forbid();
         }
 
-        // Second pass: create order items and reduce stock
-        foreach (var (product, quantity) in productsToUpdate)
+        var userId = GetUserId();
+
+        if (userId == null)
         {
-            var lineTotal = product.Price * quantity;
-            total += lineTotal;
+            return Unauthorized();
+        }
+
+        var orderItems = new List<OrderItem>();
+        decimal total = 0;
+
+        foreach (var item in dto.Items)
+        {
+            var product = await _productService.GetByIdAsync(item.ProductId);
+
+            if (product == null)
+            {
+                return NotFound($"Product {item.ProductId} not found.");
+            }
+
+            if (product.IsPrescriptionRequired)
+            {
+                return BadRequest("Prescription products cannot be ordered online.");
+            }
+
+            if (product.AvailableQuantity < item.Quantity)
+            {
+                return BadRequest($"Insufficient stock for {product.Name}.");
+            }
 
             orderItems.Add(new OrderItem
             {
                 ProductId = product.Id,
-                Quantity = quantity,
+                Quantity = item.Quantity,
                 UnitPrice = product.Price
             });
 
-            // Reduce available quantity
-            product.AvailableQuantity -= quantity;
+            total += product.Price * item.Quantity;
+            product.AvailableQuantity -= item.Quantity;
+
             await _productService.SaveAsync(product);
         }
 
         var order = new Order
         {
-            UserId = userId,
+            UserId = userId.Value,
             OrderDate = DateTime.UtcNow,
             Status = OrderStatus.Pending,
             TotalPrice = total,
@@ -282,5 +251,53 @@ public class OrdersController : ControllerBase
         await _orderService.SaveAsync(order);
 
         return Ok(new OrderResponseDto(order.Id, order.TotalPrice, order.Status.ToString()));
+    }
+
+    private int? GetUserId()
+    {
+        var claim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+        if (claim == null)
+        {
+            return null;
+        }
+
+        if (int.TryParse(claim.Value, out var id))
+        {
+            return id;
+        }
+
+        return null;
+    }
+
+    private bool IsAdmin()
+    {
+        return User.IsInRole("Administrator");
+    }
+
+    private static OrderListDto MapToListDto(Order o)
+    {
+        string userName = "";
+        string userUsername = "";
+
+        if (o.User != null)
+        {
+            userName = o.User.FirstName + " " + o.User.LastName;
+            userUsername = o.User.Username;
+        }
+
+        return new OrderListDto
+        {
+            Id = o.Id,
+            UserId = o.UserId,
+            UserName = userName,
+            UserUsername = userUsername,
+            OrderDate = o.OrderDate,
+            Status = o.Status.ToString(),
+            TotalPrice = o.TotalPrice,
+            ItemCount = o.OrderItems.Count,
+            City = o.City,
+            Province = o.Province
+        };
     }
 }

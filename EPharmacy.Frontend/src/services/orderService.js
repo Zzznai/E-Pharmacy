@@ -1,3 +1,5 @@
+import { parseApiError } from './errorHelper';
+
 const API_URL = 'http://localhost:5292/api/orders';
 
 const getAuthHeaders = () => {
@@ -14,8 +16,8 @@ export const orderService = {
       headers: getAuthHeaders()
     });
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch orders');
+      const error = await parseApiError(response, 'Failed to fetch orders');
+      throw new Error(error);
     }
     return response.json();
   },
@@ -25,8 +27,8 @@ export const orderService = {
       headers: getAuthHeaders()
     });
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch your orders');
+      const error = await parseApiError(response, 'Failed to fetch your orders');
+      throw new Error(error);
     }
     return response.json();
   },
@@ -36,8 +38,8 @@ export const orderService = {
       headers: getAuthHeaders()
     });
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch order');
+      const error = await parseApiError(response, 'Failed to fetch order');
+      throw new Error(error);
     }
     return response.json();
   },
@@ -49,8 +51,8 @@ export const orderService = {
       body: JSON.stringify(orderData)
     });
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to create order');
+      const error = await parseApiError(response, 'Failed to create order');
+      throw new Error(error);
     }
     return response.json();
   },
@@ -62,8 +64,8 @@ export const orderService = {
       body: JSON.stringify({ status })
     });
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to update order status');
+      const error = await parseApiError(response, 'Failed to update order status');
+      throw new Error(error);
     }
     return response.json();
   },
@@ -74,8 +76,8 @@ export const orderService = {
       headers: getAuthHeaders()
     });
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to delete order');
+      const error = await parseApiError(response, 'Failed to delete order');
+      throw new Error(error);
     }
     return response.json();
   },
@@ -85,8 +87,8 @@ export const orderService = {
       headers: getAuthHeaders()
     });
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch top products');
+      const error = await parseApiError(response, 'Failed to fetch top products');
+      throw new Error(error);
     }
     return response.json();
   }

@@ -1,3 +1,5 @@
+import { parseApiError } from './errorHelper';
+
 const API_BASE_URL = 'http://localhost:5292/api';
 
 const getAuthHeaders = () => {
@@ -25,8 +27,8 @@ export const productService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch products');
+      const error = await parseApiError(response, 'Failed to fetch products');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -39,8 +41,8 @@ export const productService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch product');
+      const error = await parseApiError(response, 'Failed to fetch product');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -80,8 +82,8 @@ export const productService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to create product');
+      const error = await parseApiError(response, 'Failed to create product');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -122,8 +124,8 @@ export const productService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to update product');
+      const error = await parseApiError(response, 'Failed to update product');
+      throw new Error(error);
     }
 
     return true;
@@ -136,8 +138,8 @@ export const productService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to delete product');
+      const error = await parseApiError(response, 'Failed to delete product');
+      throw new Error(error);
     }
 
     return true;
@@ -151,8 +153,8 @@ export const productService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to update quantity');
+      const error = await parseApiError(response, 'Failed to update quantity');
+      throw new Error(error);
     }
 
     return true;

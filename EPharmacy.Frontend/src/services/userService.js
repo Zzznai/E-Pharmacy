@@ -1,4 +1,5 @@
 import { authService } from './authService';
+import { parseApiError } from './errorHelper';
 
 const API_BASE_URL = 'http://localhost:5292/api';
 
@@ -19,8 +20,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch users');
+      const error = await parseApiError(response, 'Failed to fetch users');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -33,8 +34,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch profile');
+      const error = await parseApiError(response, 'Failed to fetch profile');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -47,8 +48,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch user');
+      const error = await parseApiError(response, 'Failed to fetch user');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -68,8 +69,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to create user');
+      const error = await parseApiError(response, 'Failed to create user');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -86,8 +87,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to update user');
+      const error = await parseApiError(response, 'Failed to update user');
+      throw new Error(error);
     }
 
     return true;
@@ -100,8 +101,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to delete user');
+      const error = await parseApiError(response, 'Failed to delete user');
+      throw new Error(error);
     }
 
     return true;
@@ -118,8 +119,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to change password');
+      const error = await parseApiError(response, 'Failed to change password');
+      throw new Error(error);
     }
 
     return true;
@@ -137,8 +138,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to update profile');
+      const error = await parseApiError(response, 'Failed to update profile');
+      throw new Error(error);
     }
 
     return true;
@@ -156,8 +157,8 @@ export const userService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to change password');
+      const error = await parseApiError(response, 'Failed to change password');
+      throw new Error(error);
     }
 
     return true;

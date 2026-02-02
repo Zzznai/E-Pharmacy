@@ -1,3 +1,5 @@
+import { parseApiError } from './errorHelper';
+
 const API_BASE_URL = 'http://localhost:5292/api';
 
 const getAuthHeaders = () => {
@@ -17,8 +19,8 @@ export const categoryService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch categories');
+      const error = await parseApiError(response, 'Failed to fetch categories');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -31,8 +33,8 @@ export const categoryService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch category');
+      const error = await parseApiError(response, 'Failed to fetch category');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -49,8 +51,8 @@ export const categoryService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to create category');
+      const error = await parseApiError(response, 'Failed to create category');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -67,8 +69,8 @@ export const categoryService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to update category');
+      const error = await parseApiError(response, 'Failed to update category');
+      throw new Error(error);
     }
 
     return true;
@@ -81,8 +83,8 @@ export const categoryService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to delete category');
+      const error = await parseApiError(response, 'Failed to delete category');
+      throw new Error(error);
     }
 
     return true;

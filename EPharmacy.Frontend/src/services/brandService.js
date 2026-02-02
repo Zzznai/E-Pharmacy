@@ -1,3 +1,5 @@
+import { parseApiError } from './errorHelper';
+
 const API_BASE_URL = 'http://localhost:5292/api';
 
 const getAuthHeaders = () => {
@@ -17,8 +19,8 @@ export const brandService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch brands');
+      const error = await parseApiError(response, 'Failed to fetch brands');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -31,8 +33,8 @@ export const brandService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch brand');
+      const error = await parseApiError(response, 'Failed to fetch brand');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -48,8 +50,8 @@ export const brandService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to create brand');
+      const error = await parseApiError(response, 'Failed to create brand');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -65,8 +67,8 @@ export const brandService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to update brand');
+      const error = await parseApiError(response, 'Failed to update brand');
+      throw new Error(error);
     }
 
     return true;
@@ -79,8 +81,8 @@ export const brandService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to delete brand');
+      const error = await parseApiError(response, 'Failed to delete brand');
+      throw new Error(error);
     }
 
     return true;

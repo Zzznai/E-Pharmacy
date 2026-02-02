@@ -1,3 +1,5 @@
+import { parseApiError } from './errorHelper';
+
 const API_BASE_URL = 'http://localhost:5292/api';
 
 const getAuthHeaders = () => {
@@ -17,8 +19,8 @@ export const ingredientService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch ingredients');
+      const error = await parseApiError(response, 'Failed to fetch ingredients');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -31,8 +33,8 @@ export const ingredientService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to fetch ingredient');
+      const error = await parseApiError(response, 'Failed to fetch ingredient');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -50,8 +52,8 @@ export const ingredientService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to create ingredient');
+      const error = await parseApiError(response, 'Failed to create ingredient');
+      throw new Error(error);
     }
 
     return await response.json();
@@ -69,8 +71,8 @@ export const ingredientService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to update ingredient');
+      const error = await parseApiError(response, 'Failed to update ingredient');
+      throw new Error(error);
     }
 
     return true;
@@ -83,8 +85,8 @@ export const ingredientService = {
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || 'Failed to delete ingredient');
+      const error = await parseApiError(response, 'Failed to delete ingredient');
+      throw new Error(error);
     }
 
     return true;

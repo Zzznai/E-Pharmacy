@@ -1,16 +1,11 @@
-using System;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using EPharmacy.Common.Entities;
 
 namespace EPharmacy.Common.Persistence;
 
 public class ApplicationDbContext : DbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
-    {
-    }
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<Category> Categories { get; set; } = null!;
@@ -35,7 +30,6 @@ public class ApplicationDbContext : DbContext
             .HasForeignKey(p => p.BrandId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        // Configure long text columns for descriptions
         modelBuilder.Entity<Product>()
             .Property(p => p.Description)
             .HasColumnType("nvarchar(max)");
@@ -64,28 +58,5 @@ public class ApplicationDbContext : DbContext
             .HasOne<Order>()
             .WithMany(o => o.OrderItems)
             .HasForeignKey("OrderId");
-    }
-}
-
-public static class PersistenceServiceExtensions
-{
-    /// <summary>
-    /// Registers <see cref="ApplicationDbContext"/> using the provided <see cref="IConfiguration"/>
-    /// or falls back to `app.json` located in the library folder.
-    /// </summary>
-    public static IServiceCollection AddCommonPersistence(this IServiceCollection services, IConfiguration? configuration = null)
-    {
-        IConfiguration config = configuration ?? new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("app.json", optional: true, reloadOnChange: false)
-            .Build();
-
-        var conn = config.GetConnectionString("DefaultConnection") ?? config["ConnectionStrings:DefaultConnection"];
-
-        if (string.IsNullOrWhiteSpace(conn))
-            throw new InvalidOperationException("Connection string 'DefaultConnection' not found in configuration or app.json.");
-
-        services.AddDbContext<ApplicationDbContext>(opts => opts.UseSqlServer(conn));
-        return services;
     }
 }

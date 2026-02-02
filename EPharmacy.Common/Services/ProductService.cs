@@ -1,93 +1,73 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Persistence;
 
 namespace EPharmacy.Common.Services;
 
-public class ProductService : BaseService<Product>
+public class ProductService
 {
-    public ProductService(ApplicationDbContext context) : base(context)
-    {
-    }
+    private readonly ApplicationDbContext _db;
 
-    public async Task<List<Product>> GetAllWithDetailsAsync()
-    {
-        return await Context.Products
+    public ProductService(ApplicationDbContext db) => _db = db;
+
+    public async Task<List<Product>> GetAllAsync() =>
+        await _db.Products
             .Include(p => p.Brand)
             .Include(p => p.Categories)
-            .Include(p => p.ProductIngredients)
-                .ThenInclude(pi => pi.Ingredient)
+            .Include(p => p.ProductIngredients).ThenInclude(pi => pi.Ingredient)
             .ToListAsync();
-    }
 
-    public async Task<Product?> GetWithDetailsAsync(int id)
-    {
-        return await Context.Products
+    public async Task<Product?> GetByIdAsync(int id) =>
+        await _db.Products
             .Include(p => p.Brand)
             .Include(p => p.Categories)
-            .Include(p => p.ProductIngredients)
-                .ThenInclude(pi => pi.Ingredient)
+            .Include(p => p.ProductIngredients).ThenInclude(pi => pi.Ingredient)
             .FirstOrDefaultAsync(p => p.Id == id);
-    }
 
-    public async Task SaveWithDetailsAsync(Product product, IEnumerable<int> categoryIds, IEnumerable<ProductIngredient> ingredients)
+    public async Task SaveAsync(Product product, IEnumerable<int>? categoryIds = null, IEnumerable<ProductIngredient>? ingredients = null)
     {
         if (product.Id > 0)
         {
-            // For existing products, load collections to clear/update
-            await Context.Entry(product).Collection(p => p.Categories).LoadAsync();
-            await Context.Entry(product).Collection(p => p.ProductIngredients).LoadAsync();
-            
+            await _db.Entry(product).Collection(p => p.Categories).LoadAsync();
+            await _db.Entry(product).Collection(p => p.ProductIngredients).LoadAsync();
             product.Categories.Clear();
-            Context.ProductIngredients.RemoveRange(product.ProductIngredients);
-            product.ProductIngredients.Clear();
+            _db.ProductIngredients.RemoveRange(product.ProductIngredients);
         }
 
-        var categoryIdsList = categoryIds.ToList();
-
-        // If product is a prescription drug, ensure it's assigned to "Prescription drugs" category
-        if (product.IsPrescriptionRequired)
+        if (categoryIds != null)
         {
-            var prescriptionCategory = await Context.Categories.FirstOrDefaultAsync(c => c.Name == "Prescription drugs");
-            if (prescriptionCategory != null && !categoryIdsList.Contains(prescriptionCategory.Id))
+            var ids = categoryIds.ToList();
+            
+            if (product.IsPrescriptionRequired)
             {
-                categoryIdsList.Add(prescriptionCategory.Id);
+                var rxCat = await _db.Categories.FirstOrDefaultAsync(c => c.Name == "Prescription drugs");
+                if (rxCat != null && !ids.Contains(rxCat.Id))
+                    ids.Add(rxCat.Id);
+                product.AvailableQuantity = 0;
             }
-            // Reset quantity for prescription products
-            product.AvailableQuantity = 0;
+
+            var categories = await _db.Categories.Where(c => ids.Contains(c.Id)).ToListAsync();
+            foreach (var cat in categories)
+                product.Categories.Add(cat);
         }
 
-        var categories = await Context.Categories.Where(c => categoryIdsList.Contains(c.Id)).ToListAsync();
-        foreach (var cat in categories)
-            product.Categories.Add(cat);
-
-        // Add ingredients to the product's collection (EF will handle the FK)
-        var ingredientsList = ingredients.ToList();
-        foreach (var pi in ingredientsList)
+        if (ingredients != null)
         {
-            product.ProductIngredients.Add(pi);
+            foreach (var pi in ingredients)
+                product.ProductIngredients.Add(pi);
         }
 
-        if (product.Id > 0)
-            Context.Products.Update(product);
+        if (product.Id == 0)
+            _db.Products.Add(product);
         else
-            Context.Products.Add(product);
+            _db.Products.Update(product);
 
-        await Context.SaveChangesAsync();
+        await _db.SaveChangesAsync();
     }
 
-    // Provide cascade delete behavior when removing a product.
-    // This hides the base Delete method to perform extra cleanup of
-    // related ProductIngredient entries and their Ingredients.
-    public new async Task DeleteAsync(Product product)
+    public async Task DeleteAsync(Product product)
     {
-        if (product == null) return;
-
-        // Find product-ingredient join rows using the shadow FK "ProductId"
-        var related = await Context.ProductIngredients
+        var related = await _db.ProductIngredients
             .Where(pi => EF.Property<int>(pi, "ProductId") == product.Id)
             .ToListAsync();
 
@@ -95,15 +75,14 @@ public class ProductService : BaseService<Product>
         {
             if (pi.IngredientId > 0)
             {
-                var ingredient = await Context.Ingredients.FirstOrDefaultAsync(i => i.Id == pi.IngredientId);
+                var ingredient = await _db.Ingredients.FindAsync(pi.IngredientId);
                 if (ingredient != null)
-                    Context.Ingredients.Remove(ingredient);
+                    _db.Ingredients.Remove(ingredient);
             }
-
-            Context.ProductIngredients.Remove(pi);
+            _db.ProductIngredients.Remove(pi);
         }
 
-        Context.Products.Remove(product);
-        await Context.SaveChangesAsync();
+        _db.Products.Remove(product);
+        await _db.SaveChangesAsync();
     }
 }
