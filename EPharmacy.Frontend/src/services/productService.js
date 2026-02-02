@@ -34,6 +34,26 @@ export const productService = {
     return await response.json();
   },
 
+  async search(searchTerm, categoryId) {
+    const params = new URLSearchParams();
+    if (searchTerm) params.append('search', searchTerm);
+    if (categoryId) params.append('categoryId', categoryId);
+    
+    const url = `${API_BASE_URL}/Products${params.toString() ? '?' + params.toString() : ''}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getAuthHeaders()
+    });
+
+    if (!response.ok) {
+      const error = await parseApiError(response, 'Failed to search products');
+      throw new Error(error);
+    }
+
+    return await response.json();
+  },
+
   async getById(id) {
     const response = await fetch(`${API_BASE_URL}/Products/${id}`, {
       method: 'GET',

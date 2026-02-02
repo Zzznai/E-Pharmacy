@@ -17,6 +17,52 @@ public class ProductService
             .Include(p => p.ProductIngredients).ThenInclude(pi => pi.Ingredient)
             .ToListAsync();
 
+    public async Task<List<Product>> SearchAsync(string? searchTerm, int? categoryId)
+    {
+        var query = _db.Products
+            .Include(p => p.Brand)
+            .Include(p => p.Categories)
+            .Include(p => p.ProductIngredients).ThenInclude(pi => pi.Ingredient)
+            .AsQueryable();
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var term = searchTerm.ToLower();
+            query = query.Where(p => 
+                p.Name.ToLower().Contains(term) || 
+                (p.Description != null && p.Description.ToLower().Contains(term)));
+        }
+
+        // Apply category filter (including descendants)
+        if (categoryId.HasValue)
+        {
+            var categoryIds = await GetCategoryAndDescendantIdsAsync(categoryId.Value);
+            query = query.Where(p => p.Categories.Any(c => categoryIds.Contains(c.Id)));
+        }
+
+        return await query.ToListAsync();
+    }
+
+    private async Task<List<int>> GetCategoryAndDescendantIdsAsync(int categoryId)
+    {
+        var allCategories = await _db.Categories.ToListAsync();
+        var ids = new List<int> { categoryId };
+        
+        void FindChildren(int parentId)
+        {
+            var children = allCategories.Where(c => c.ParentCategoryId == parentId);
+            foreach (var child in children)
+            {
+                ids.Add(child.Id);
+                FindChildren(child.Id);
+            }
+        }
+        
+        FindChildren(categoryId);
+        return ids;
+    }
+
     public async Task<Product?> GetByIdAsync(int id) =>
         await _db.Products
             .Include(p => p.Brand)

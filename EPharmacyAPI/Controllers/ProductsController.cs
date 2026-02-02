@@ -21,9 +21,9 @@ public class ProductsController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] int? categoryId)
     {
-        var products = await _productService.GetAllAsync();
+        var products = await _productService.SearchAsync(search, categoryId);
 
         return Ok(products.Select(MapToDto));
     }
