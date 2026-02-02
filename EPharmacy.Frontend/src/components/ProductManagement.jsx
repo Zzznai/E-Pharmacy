@@ -31,11 +31,9 @@ function ProductManagement() {
     isPrescriptionRequired: false,
     brandId: '',
     categoryIds: [],
-    ingredients: []
+    ingredients: [],
+    imageUrl: ''
   });
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [removeImage, setRemoveImage] = useState(false);
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -122,11 +120,9 @@ function ProductManagement() {
       isPrescriptionRequired: false,
       brandId: '',
       categoryIds: [],
-      ingredients: []
+      ingredients: [],
+      imageUrl: ''
     });
-    setImageFile(null);
-    setImagePreview(null);
-    setRemoveImage(false);
     setFormError('');
     setSelectedIngredientId('');
     setSelectedIngredientName('');
@@ -156,11 +152,9 @@ function ProductManagement() {
         ingredientId: i.ingredientId,
         amount: i.amount,
         unit: i.unit
-      })) || []
+      })) || [],
+      imageUrl: product.photoUrl || ''
     });
-    setImageFile(null);
-    setImagePreview(product.photoUrl);
-    setRemoveImage(false);
     setFormError('');
     // Reset ingredient input fields
     setSelectedIngredientId('');
@@ -187,21 +181,6 @@ function ProductManagement() {
     } catch (err) {
       setError(err.message);
     }
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setImageFile(file);
-      setImagePreview(URL.createObjectURL(file));
-      setRemoveImage(false);
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
-    setRemoveImage(true);
   };
 
   const handleAddIngredient = () => {
@@ -317,8 +296,9 @@ function ProductManagement() {
         isPrescriptionRequired: formData.isPrescriptionRequired,
         brandId: formData.brandId ? parseInt(formData.brandId) : null,
         categoryIds: formData.categoryIds,
-        ingredients: formData.ingredients
-      }, imageFile);
+        ingredients: formData.ingredients,
+        imageUrl: formData.imageUrl || null
+      });
       setShowAddModal(false);
       await fetchData();
     } catch (err) {
@@ -352,8 +332,9 @@ function ProductManagement() {
         isPrescriptionRequired: formData.isPrescriptionRequired,
         brandId: formData.brandId ? parseInt(formData.brandId) : null,
         categoryIds: formData.categoryIds,
-        ingredients: formData.ingredients
-      }, imageFile, removeImage);
+        ingredients: formData.ingredients,
+        imageUrl: formData.imageUrl || null
+      });
       setShowEditModal(false);
       await fetchData();
     } catch (err) {
@@ -674,32 +655,18 @@ function ProductManagement() {
                 </div>
 
                 <div className="form-group">
-                  <label>Product Image</label>
-                  <div className="image-upload-area">
-                    {imagePreview ? (
-                      <div className="image-preview">
-                        <img src={imagePreview} alt="Preview" />
-                        <button type="button" className="remove-image-btn" onClick={handleRemoveImage}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="upload-label">
-                        <input type="file" accept="image/*" onChange={handleImageChange} />
-                        <div className="upload-content">
-                          <svg className="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <polyline points="21 15 16 10 5 21" />
-                          </svg>
-                          <span>Click to upload image</span>
-                        </div>
-                      </label>
-                    )}
-                  </div>
+                  <label>Image URL</label>
+                  <input
+                    type="text"
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    placeholder="Enter image URL (e.g., https://example.com/image.jpg)"
+                  />
+                  {formData.imageUrl && (
+                    <div className="image-preview" style={{ marginTop: '10px' }}>
+                      <img src={formData.imageUrl} alt="Preview" style={{ maxWidth: '200px', maxHeight: '200px' }} />
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -954,32 +921,18 @@ function ProductManagement() {
                 </div>
 
                 <div className="form-group">
-                  <label>Product Image</label>
-                  <div className="image-upload-area">
-                    {imagePreview ? (
-                      <div className="image-preview">
-                        <img src={imagePreview} alt="Preview" />
-                        <button type="button" className="remove-image-btn" onClick={handleRemoveImage}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      </div>
-                    ) : (
-                      <label className="upload-label">
-                        <input type="file" accept="image/*" onChange={handleImageChange} />
-                        <div className="upload-content">
-                          <svg className="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <polyline points="21 15 16 10 5 21" />
-                          </svg>
-                          <span>Click to upload image</span>
-                        </div>
-                      </label>
-                    )}
-                  </div>
+                  <label>Image URL</label>
+                  <input
+                    type="text"
+                    value={formData.imageUrl}
+                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                    placeholder="Enter image URL (e.g., https://example.com/image.jpg)"
+                  />
+                  {formData.imageUrl && (
+                    <div className="image-preview" style={{ marginTop: '10px' }}>
+                      <img src={formData.imageUrl} alt="Preview" style={{ maxWidth: '200px', maxHeight: '200px' }} />
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group">

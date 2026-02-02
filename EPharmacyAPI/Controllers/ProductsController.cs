@@ -1,7 +1,6 @@
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Products;
-using EPharmacyAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,13 +12,11 @@ public class ProductsController : ControllerBase
 {
     private readonly ProductService _productService;
     private readonly BrandService _brandService;
-    private readonly ICloudinaryService _cloudinaryService;
 
-    public ProductsController(ProductService productService, BrandService brandService, ICloudinaryService cloudinaryService)
+    public ProductsController(ProductService productService, BrandService brandService)
     {
         _productService = productService;
         _brandService = brandService;
-        _cloudinaryService = cloudinaryService;
     }
 
     [HttpGet]
@@ -47,7 +44,7 @@ public class ProductsController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Administrator")]
-    public async Task<IActionResult> Create([FromForm] ProductCreateFormDto dto)
+    public async Task<IActionResult> Create([FromBody] ProductCreateFormDto dto)
     {
         var ingredientDtos = ParseIngredients(dto.IngredientsJson);
 
@@ -66,22 +63,10 @@ public class ProductsController : ControllerBase
             }
         }
 
-        string photoUrl = "";
-
-        if (dto.Image != null)
-        {
-            var uploaded = await _cloudinaryService.UploadImageAsync(dto.Image);
-
-            if (uploaded != null)
-            {
-                photoUrl = uploaded;
-            }
-        }
-
         var product = new Product
         {
             Name = dto.Name,
-            PhotoUrl = photoUrl,
+            PhotoUrl = dto.ImageUrl ?? "",
             Price = dto.Price,
             AvailableQuantity = dto.AvailableQuantity,
             Description = dto.Description ?? "",
@@ -107,7 +92,7 @@ public class ProductsController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Administrator")]
-    public async Task<IActionResult> Update(int id, [FromForm] ProductUpdateFormDto dto)
+    public async Task<IActionResult> Update(int id, [FromBody] ProductUpdateFormDto dto)
     {
         var product = await _productService.GetByIdAsync(id);
 
@@ -133,31 +118,8 @@ public class ProductsController : ControllerBase
             }
         }
 
-        if (dto.RemoveImage && !string.IsNullOrEmpty(product.PhotoUrl))
-        {
-            await _cloudinaryService.DeleteImageAsync(_cloudinaryService.GetPublicIdFromUrl(product.PhotoUrl));
-            product.PhotoUrl = "";
-        }
-        else if (dto.Image != null)
-        {
-            if (!string.IsNullOrEmpty(product.PhotoUrl))
-            {
-                await _cloudinaryService.DeleteImageAsync(_cloudinaryService.GetPublicIdFromUrl(product.PhotoUrl));
-            }
-
-            var uploaded = await _cloudinaryService.UploadImageAsync(dto.Image);
-
-            if (uploaded != null)
-            {
-                product.PhotoUrl = uploaded;
-            }
-            else
-            {
-                product.PhotoUrl = "";
-            }
-        }
-
         product.Name = dto.Name;
+        product.PhotoUrl = dto.ImageUrl ?? "";
         product.Price = dto.Price;
         product.AvailableQuantity = dto.AvailableQuantity;
         product.Description = dto.Description ?? "";
@@ -187,11 +149,6 @@ public class ProductsController : ControllerBase
         if (product == null)
         {
             return NotFound();
-        }
-
-        if (!string.IsNullOrEmpty(product.PhotoUrl))
-        {
-            await _cloudinaryService.DeleteImageAsync(_cloudinaryService.GetPublicIdFromUrl(product.PhotoUrl));
         }
 
         await _productService.DeleteAsync(product);

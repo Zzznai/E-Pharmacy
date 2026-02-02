@@ -141,10 +141,32 @@ function UserDashboard() {
     localStorage.setItem('basket', JSON.stringify(newBasket));
   };
 
+  // Get a category and all its descendant (child) category IDs
+  const getCategoryAndDescendants = (categoryId) => {
+    const ids = [parseInt(categoryId)];
+    const findChildren = (parentId) => {
+      categories.filter(c => c.parentCategoryId === parentId).forEach(child => {
+        ids.push(child.id);
+        findChildren(child.id);
+      });
+    };
+    findChildren(parseInt(categoryId));
+    return ids;
+  };
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = !selectedCategory || product.categoryIds?.includes(parseInt(selectedCategory));
+    
+    // When filtering by category, include products that belong to:
+    // 1. The selected category itself
+    // 2. Any descendant (child) categories of the selected category
+    let matchesCategory = !selectedCategory;
+    if (selectedCategory && product.categoryIds) {
+      const selectedAndDescendants = getCategoryAndDescendants(selectedCategory);
+      matchesCategory = product.categoryIds.some(catId => selectedAndDescendants.includes(catId));
+    }
+    
     return matchesSearch && matchesCategory;
   });
 
@@ -582,7 +604,7 @@ function UserDashboard() {
           {filteredProducts.map(product => (
             <div 
               key={product.id} 
-              className={`product-card ${product.isPrescriptionRequired ? 'prescription-product' : ''} clickable`}
+              className={`product-card ${product.isPrescriptionRequired ? 'prescription-product' : ''} ${product.availableQuantity === 0 ? 'out-of-stock' : ''} clickable`}
               onClick={() => setSelectedProduct(product)}
             >
               <div className="product-image">
@@ -594,6 +616,9 @@ function UserDashboard() {
                 {product.isPrescriptionRequired && (
                   <div className="prescription-badge">Pr</div>
                 )}
+                {product.availableQuantity === 0 && !product.isPrescriptionRequired && (
+                  <div className="out-of-stock-badge">Out of Stock</div>
+                )}
                 <div className="view-details-hint">Click for details</div>
               </div>
               <div className="product-info">
@@ -603,12 +628,12 @@ function UserDashboard() {
                   <span className="product-price">{formatCurrency(product.price)}</span>
                   {userInfo && (
                     <button 
-                      className={`add-to-cart-btn ${product.isPrescriptionRequired ? 'disabled' : ''}`}
+                      className={`add-to-cart-btn ${product.isPrescriptionRequired || product.availableQuantity === 0 ? 'disabled' : ''}`}
                       onClick={(e) => { e.stopPropagation(); addToBasket(product); }}
-                      disabled={product.isPrescriptionRequired}
-                      title={product.isPrescriptionRequired ? 'Prescription required - cannot order online' : 'Add to basket'}
+                      disabled={product.isPrescriptionRequired || product.availableQuantity === 0}
+                      title={product.isPrescriptionRequired ? 'Prescription required - cannot order online' : product.availableQuantity === 0 ? 'Out of stock' : 'Add to basket'}
                     >
-                      {product.isPrescriptionRequired ? 'Pr Only' : '+ Add'}
+                      {product.isPrescriptionRequired ? 'Pr Only' : product.availableQuantity === 0 ? 'Out of Stock' : '+ Add'}
                     </button>
                   )}
                 </div>

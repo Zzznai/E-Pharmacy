@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.Http;
-
 namespace EPharmacyAPI.Dtos.Products;
 
 public class ProductUpdateFormDto
@@ -12,6 +10,5 @@ public class ProductUpdateFormDto
     public int? BrandId { get; set; }
     public List<int>? CategoryIds { get; set; }
     public string? IngredientsJson { get; set; }
-    public IFormFile? Image { get; set; }
-    public bool RemoveImage { get; set; }
+    public string? ImageUrl { get; set; }
 }

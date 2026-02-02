@@ -48,37 +48,23 @@ export const productService = {
     return await response.json();
   },
 
-  async create(productData, imageFile) {
-    const formData = new FormData();
-    formData.append('Name', productData.name);
-    formData.append('Price', productData.price.toString());
-    formData.append('AvailableQuantity', productData.availableQuantity.toString());
-    formData.append('Description', productData.description || '');
-    formData.append('IsPrescriptionRequired', productData.isPrescriptionRequired.toString());
-    
-    if (productData.brandId) {
-      formData.append('BrandId', productData.brandId.toString());
-    }
-    
-    if (productData.categoryIds && productData.categoryIds.length > 0) {
-      productData.categoryIds.forEach(id => {
-        formData.append('CategoryIds', id.toString());
-      });
-    }
-    
-    // Always send IngredientsJson, even if empty array
-    const ingredientsJson = JSON.stringify(productData.ingredients || []);
-    console.log('Sending IngredientsJson:', ingredientsJson);
-    formData.append('IngredientsJson', ingredientsJson);
-    
-    if (imageFile) {
-      formData.append('Image', imageFile);
-    }
+  async create(productData) {
+    const body = {
+      name: productData.name,
+      price: productData.price,
+      availableQuantity: productData.availableQuantity,
+      description: productData.description || '',
+      isPrescriptionRequired: productData.isPrescriptionRequired,
+      brandId: productData.brandId || null,
+      categoryIds: productData.categoryIds || [],
+      ingredientsJson: JSON.stringify(productData.ingredients || []),
+      imageUrl: productData.imageUrl || null
+    };
 
     const response = await fetch(`${API_BASE_URL}/Products`, {
       method: 'POST',
-      headers: getAuthHeaders(),
-      body: formData
+      headers: getAuthHeadersJson(),
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {
@@ -89,38 +75,23 @@ export const productService = {
     return await response.json();
   },
 
-  async update(id, productData, imageFile, removeImage = false) {
-    const formData = new FormData();
-    formData.append('Name', productData.name);
-    formData.append('Price', productData.price.toString());
-    formData.append('AvailableQuantity', productData.availableQuantity.toString());
-    formData.append('Description', productData.description || '');
-    formData.append('IsPrescriptionRequired', productData.isPrescriptionRequired.toString());
-    formData.append('RemoveImage', removeImage.toString());
-    
-    if (productData.brandId) {
-      formData.append('BrandId', productData.brandId.toString());
-    }
-    
-    if (productData.categoryIds && productData.categoryIds.length > 0) {
-      productData.categoryIds.forEach(id => {
-        formData.append('CategoryIds', id.toString());
-      });
-    }
-    
-    // Always send IngredientsJson, even if empty array
-    const ingredientsJson = JSON.stringify(productData.ingredients || []);
-    console.log('Update - Sending IngredientsJson:', ingredientsJson);
-    formData.append('IngredientsJson', ingredientsJson);
-    
-    if (imageFile) {
-      formData.append('Image', imageFile);
-    }
+  async update(id, productData) {
+    const body = {
+      name: productData.name,
+      price: productData.price,
+      availableQuantity: productData.availableQuantity,
+      description: productData.description || '',
+      isPrescriptionRequired: productData.isPrescriptionRequired,
+      brandId: productData.brandId || null,
+      categoryIds: productData.categoryIds || [],
+      ingredientsJson: JSON.stringify(productData.ingredients || []),
+      imageUrl: productData.imageUrl || null
+    };
 
     const response = await fetch(`${API_BASE_URL}/Products/${id}`, {
       method: 'PUT',
-      headers: getAuthHeaders(),
-      body: formData
+      headers: getAuthHeadersJson(),
+      body: JSON.stringify(body)
     });
 
     if (!response.ok) {
