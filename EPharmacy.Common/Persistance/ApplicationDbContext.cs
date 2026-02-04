@@ -7,6 +7,16 @@ public class ApplicationDbContext : DbContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
+    public ApplicationDbContext() { }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=EPharmacyDb;Trusted_Connection=True;TrustServerCertificate=True;");
+        }
+    }
+
     public DbSet<Product> Products { get; set; } = null!;
     public DbSet<Category> Categories { get; set; } = null!;
     public DbSet<Brand> Brands { get; set; } = null!;

@@ -70,8 +70,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 // register DbContext
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<ApplicationDbContext>();
 
 // register services
 builder.Services.AddScoped<UserService>();
