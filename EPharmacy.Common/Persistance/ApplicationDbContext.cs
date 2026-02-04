@@ -53,14 +53,19 @@ public class ApplicationDbContext : DbContext
             .WithMany(p => p.ProductIngredients)
             .HasForeignKey("ProductId");
 
+        modelBuilder.Entity<ProductIngredient>()
+            .HasOne(pi => pi.Ingredient)
+            .WithMany(i => i.ProductIngredients)
+            .HasForeignKey(pi => pi.IngredientId);
+
         modelBuilder.Entity<OrderItem>()
             .HasOne(oi => oi.Product)
             .WithMany(p => p.OrderItems)
-            .HasForeignKey("ProductId");
+            .HasForeignKey(oi => oi.ProductId);
 
         modelBuilder.Entity<OrderItem>()
-            .HasOne<Order>()
+            .HasOne(oi => oi.Order)
             .WithMany(o => o.OrderItems)
-            .HasForeignKey("OrderId");
+            .HasForeignKey(oi => oi.OrderId);
     }
 }

@@ -1,0 +1,1386 @@
+# E-Pharmacy Backend - Пълна Документация за Устен Изпит
+
+## Съдържание
+1. [Обща архитектура на проекта](#1-обща-архитектура-на-проекта)
+2. [Data Layer - Entities и DbContext](#2-data-layer---entities-и-dbcontext)
+3. [Релации между ентитетите](#3-релации-между-ентитетите)
+4. [Service Layer - Бизнес логика](#4-service-layer---бизнес-логика)
+5. [Controllers и Request Flow](#5-controllers-и-request-flow)
+6. [Автентикация и Авторизация (JWT)](#6-автентикация-и-авторизация-jwt)
+7. [Валидация с FluentValidation](#7-валидация-с-fluentvalidation)
+8. [Program.cs - Стартиране на приложението](#8-programcs---стартиране-на-приложението)
+9. [Често допускани грешки от студенти](#9-често-допускани-грешки-от-студенти)
+
+---
+
+## 1. Обща архитектура на проекта
+
+### Какво представлява проектът?
+
+E-Pharmacy е **ASP.NET Core Web API** приложение за управление на електронна аптека. Системата позволява:
+- Управление на продукти (лекарства)
+- Категоризиране на продуктите
+- Управление на марки (Brand) и съставки (Ingredient)
+- Създаване и управление на поръчки
+- Потребителска регистрация и автентикация
+
+### Структура на Solution-а
+
+Проектът е разделен на **два основни проекта**:
+
+```
+E-Pharma.sln
+├── EPharmacy.Common/      (Class Library)
+│   ├── Entities/          → Дефиниция на бизнес обектите
+│   ├── Enums/             → Изброени типове
+│   ├── Persistance/       → DbContext (достъп до база данни)
+│   ├── Services/          → Бизнес логика
+│   └── Migrations/        → Database миграции
+│
+└── EPharmacyAPI/          (ASP.NET Core Web API)
+    ├── Controllers/       → HTTP endpoints
+    ├── Dtos/              → Data Transfer Objects
+    ├── Services/          → API-специфични услуги (TokenService)
+    ├── Validators/        → FluentValidation валидатори
+    └── Program.cs         → Entry point и конфигурация
+```
+
+### Защо е разделен така?
+
+**EPharmacy.Common** е **споделена библиотека** - съдържа логика, която може да се използва от различни приложения (Web API, Console App, WPF и др.). Това позволява **повторна употреба на кода** (code reusability).
+
+**EPharmacyAPI** е **Web API** проектът, който зависи от EPharmacy.Common и добавя HTTP-специфична функционалност.
+
+---
+
+## 2. Data Layer - Entities и DbContext
+
+### BaseEntity - Базов клас
+
+```csharp
+public class BaseEntity
+{
+    public int Id { get; set; }
+}
+```
+
+**Цел:** Всички ентитети наследяват от `BaseEntity`. Това осигурява, че всеки обект в базата данни има уникален идентификатор `Id`. Entity Framework автоматично разпознава `Id` като **Primary Key** (първичен ключ).
+
+**Защо е важно:** Без първичен ключ, Entity Framework не може да проследява промените по обектите. Като извлечем `Id` в базов клас, избягваме повторение на код.
+
+---
+
+### User (Потребител)
+
+```csharp
+public class User : BaseEntity
+{
+    public string Username { get; set; } = string.Empty;
+    public string PasswordHash { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public UserRoles Role { get; set; }
+    public ICollection<Order> Orders { get; set; } = new List<Order>();
+}
+```
+
+**Полета:**
+- `Username` - Уникално потребителско име за вход
+- `PasswordHash` - **Хеширана парола** (никога не се съхранява в чист текст!)
+- `FirstName`, `LastName` - Лични данни
+- `Role` - Роля на потребителя (Administrator или Customer)
+- `Orders` - Колекция от поръчки (навигационно свойство)
+
+**Навигационно свойство:** `Orders` е колекция, която Entity Framework използва за да зареди свързаните поръчки. Това е част от **релацията 1:N** (един потребител има много поръчки).
+
+---
+
+### UserRoles (Enum)
+
+```csharp
+public enum UserRoles
+{
+    Administrator,
+    Customer
+}
+```
+
+**Цел:** Дефинира възможните роли в системата. Enum-ите са по-добри от string стойности, защото:
+1. Компилаторът проверява за грешки
+2. IntelliSense показва възможните стойности
+3. Предотвратяват typo грешки ("admin" vs "Admin")
+
+---
+
+### Product (Продукт)
+
+```csharp
+public class Product : BaseEntity
+{
+    public string Name { get; set; } = string.Empty;
+    public string PhotoUrl { get; set; } = string.Empty;
+    public int BrandId { get; set; }
+    public decimal Price { get; set; }
+    public int AvailableQuantity { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public bool IsPrescriptionRequired { get; set; }
+
+    public Brand Brand { get; set; } = null!;
+    public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+    public ICollection<Category> Categories { get; set; } = new List<Category>();
+    public ICollection<ProductIngredient> ProductIngredients { get; set; } = new List<ProductIngredient>();
+}
+```
+
+**Полета:**
+- `BrandId` - **Foreign Key** към Brand таблицата
+- `Brand` - Навигационно свойство (1:N с Brand)
+- `IsPrescriptionRequired` - Дали продуктът изисква рецепта
+- `Categories` - Колекция от категории (M:N релация)
+- `ProductIngredients` - Съставки на продукта
+
+**Важно:** `decimal` се използва за `Price`, защото `float/double` имат проблеми с точността при финансови изчисления.
+
+---
+
+### Brand (Марка)
+
+```csharp
+public class Brand : BaseEntity
+{
+    public string Name { get; set; } = string.Empty;
+    public ICollection<Product> Products { get; set; } = new List<Product>();
+}
+```
+
+**Цел:** Представлява производител/марка на продуктите. Една марка може да има много продукти (**1:N релация**).
+
+---
+
+### Category (Категория)
+
+```csharp
+public class Category : BaseEntity
+{
+    public string Name { get; set; } = string.Empty;
+    public ICollection<Product> Products { get; set; } = new List<Product>();
+}
+```
+
+**Цел:** Категоризиране на продуктите (напр. "Обезболяващи", "Витамини", "Рецептурни лекарства").
+
+**Релация:** Един продукт може да е в много категории, една категория съдържа много продукти = **M:N релация**.
+
+---
+
+### Ingredient (Съставка)
+
+```csharp
+public class Ingredient : BaseEntity
+{
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool IsActiveSubstance { get; set; }
+    public ICollection<ProductIngredient> ProductIngredients { get; set; } = new List<ProductIngredient>();
+}
+```
+
+**Полета:**
+- `IsActiveSubstance` - Дали съставката е активно вещество (важно за фармацевтични продукти)
+
+---
+
+### ProductIngredient (Junction Table)
+
+```csharp
+public class ProductIngredient : BaseEntity
+{
+    public int IngredientId { get; set; }
+    public decimal Amount { get; set; }
+    public string Unit { get; set; } = string.Empty;
+    public Product Product { get; set; } = null!;
+    public Ingredient Ingredient { get; set; } = null!;
+}
+```
+
+**Цел:** Това е **свързваща таблица** (junction/bridge table) за M:N релацията между Product и Ingredient. Освен това съхранява **допълнителна информация**:
+- `Amount` - Количество на съставката
+- `Unit` - Мерна единица (mg, ml, g)
+
+**Защо отделен клас?** Когато M:N релация има допълнителни атрибути, трябва да се моделира като отделен ентитет.
+
+---
+
+### Order (Поръчка)
+
+```csharp
+public class Order : BaseEntity
+{
+    public int UserId { get; set; }
+    public DateTime OrderDate { get; set; }
+    public OrderStatus Status { get; set; }
+    public decimal TotalPrice { get; set; }
+    public string DeliveryAddress { get; set; } = string.Empty;
+    public string City { get; set; } = string.Empty;
+    public string Province { get; set; } = string.Empty;
+    public string PostalCode { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public User User { get; set; } = null!;
+    public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+}
+```
+
+**OrderStatus enum:**
+```csharp
+public enum OrderStatus
+{
+    Pending,      // Изчакваща
+    Processing,   // В обработка
+    Shipped,      // Изпратена
+    Delivered,    // Доставена
+    Cancelled     // Отказана
+}
+```
+
+---
+
+### OrderItem (Артикул в поръчка)
+
+```csharp
+public class OrderItem : BaseEntity
+{
+    public int ProductId { get; set; }
+    public int OrderId { get; set; }
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+    public Order Order { get; set; } = null!;
+    public Product Product { get; set; } = null!;
+}
+```
+
+**Цел:** Представлява един ред от поръчката. Съхранява:
+- `UnitPrice` - Цената **към момента на поръчката** (важно, защото цените се променят)
+- `Quantity` - Количество
+
+---
+
+### ApplicationDbContext
+
+```csharp
+public class ApplicationDbContext : DbContext
+{
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+
+    public ApplicationDbContext() { }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=EPharmacyDb;...");
+        }
+    }
+
+    public DbSet<Product> Products { get; set; } = null!;
+    public DbSet<Category> Categories { get; set; } = null!;
+    public DbSet<Brand> Brands { get; set; } = null!;
+    public DbSet<Ingredient> Ingredients { get; set; } = null!;
+    public DbSet<ProductIngredient> ProductIngredients { get; set; } = null!;
+    public DbSet<Order> Orders { get; set; } = null!;
+    public DbSet<OrderItem> OrderItems { get; set; } = null!;
+    public DbSet<User> Users { get; set; } = null!;
+}
+```
+
+**Какво е DbContext?**
+DbContext е "мостът" между приложението и базата данни. Чрез него:
+1. Създаваме, четем, актуализираме и изтриваме записи (CRUD)
+2. Проследяваме промените (Change Tracking)
+3. Изпълняваме LINQ заявки, които се превеждат в SQL
+
+**DbSet<T>** - Представлява таблица в базата данни. `DbSet<Product>` позволява операции върху таблицата Products.
+
+### OnModelCreating - Fluent API конфигурация
+
+```csharp
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+
+    // M:N релация между Product и Category (автоматична junction table)
+    modelBuilder.Entity<Product>()
+        .HasMany(p => p.Categories)
+        .WithMany(c => c.Products);
+
+    // 1:N релация между Brand и Product
+    modelBuilder.Entity<Product>()
+        .HasOne(p => p.Brand)
+        .WithMany(b => b.Products)
+        .HasForeignKey(p => p.BrandId)
+        .OnDelete(DeleteBehavior.SetNull);
+
+    // Конфигурация на колона
+    modelBuilder.Entity<Product>()
+        .Property(p => p.Description)
+        .HasColumnType("nvarchar(max)");
+
+    // Ръчна конфигурация на ProductIngredient
+    modelBuilder.Entity<ProductIngredient>()
+        .HasOne(pi => pi.Product)
+        .WithMany(p => p.ProductIngredients)
+        .HasForeignKey("ProductId");
+
+    modelBuilder.Entity<ProductIngredient>()
+        .HasOne(pi => pi.Ingredient)
+        .WithMany(i => i.ProductIngredients)
+        .HasForeignKey(pi => pi.IngredientId);
+
+    // OrderItem релации
+    modelBuilder.Entity<OrderItem>()
+        .HasOne(oi => oi.Product)
+        .WithMany(p => p.OrderItems)
+        .HasForeignKey(oi => oi.ProductId);
+
+    modelBuilder.Entity<OrderItem>()
+        .HasOne(oi => oi.Order)
+        .WithMany(o => o.OrderItems)
+        .HasForeignKey(oi => oi.OrderId);
+}
+```
+
+**Защо Fluent API?**
+- По-голям контрол върху конфигурацията
+- Ясно документирани релации
+- `OnDelete(DeleteBehavior.SetNull)` - когато се изтрие Brand, продуктите остават, но BrandId става NULL
+
+---
+
+## 3. Релации между ентитетите
+
+### Диаграма на релациите
+
+```
+User (1) ─────────────< (N) Order
+                              │
+                              │ (1)
+                              │
+                              ▼
+                         (N) OrderItem (N) ─────────────> (1) Product
+                                                              │
+                         ┌────────────────────────────────────┤
+                         │                                    │
+                         ▼                                    ▼
+                    (1) Brand                           (N) Category
+                                                       (M:N с Product)
+                         
+Product (1) ─────────────< (N) ProductIngredient (N) >─────────────(1) Ingredient
+```
+
+### Обяснение на релациите
+
+| Релация | Тип | Описание |
+|---------|-----|----------|
+| User → Order | 1:N | Един потребител има много поръчки |
+| Order → OrderItem | 1:N | Една поръчка има много артикули |
+| Product → OrderItem | 1:N | Един продукт може да е в много поръчки |
+| Brand → Product | 1:N | Една марка има много продукти |
+| Product ↔ Category | M:N | Продукт може да е в много категории |
+| Product ↔ Ingredient | M:N | Продукт има много съставки (чрез ProductIngredient) |
+
+---
+
+## 4. Service Layer - Бизнес логика
+
+### Какво е Service Layer?
+
+Service Layer е слой, който **капсулира бизнес логиката**. Контролерите не трябва да съдържат сложна логика - те само приемат заявки и връщат отговори.
+
+### UserService
+
+```csharp
+public class UserService
+{
+    private readonly ApplicationDbContext _db;
+
+    public UserService(ApplicationDbContext db)
+    {
+        _db = db;
+    }
+
+    public async Task<List<User>> GetAll()
+    {
+        return await _db.Users.ToListAsync();
+    }
+
+    public async Task<User?> GetById(int id)
+    {
+        return await _db.Users.FindAsync(id);
+    }
+
+    public async Task<User?> GetByUsername(string username)
+    {
+        return await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+    }
+
+    public async Task Save(User user)
+    {
+        if (user.Id == 0)
+        {
+            _db.Users.Add(user);
+        }
+        else
+        {
+            _db.Users.Update(user);
+        }
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task Delete(User user)
+    {
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync();
+    }
+}
+```
+
+**Анализ:**
+
+1. **Constructor Injection** - `ApplicationDbContext` се инжектира чрез конструктора. Това е **Dependency Injection** pattern.
+
+2. **async/await** - Методите са асинхронни. Това е важно за Web API, защото:
+   - Не блокира thread-а докато чака база данни
+   - Позволява обслужване на повече заявки едновременно
+
+3. **Save метод** - Умен подход: ако `Id == 0`, значи е нов обект (Add), иначе се актуализира (Update).
+
+4. **FindAsync vs FirstOrDefaultAsync**:
+   - `FindAsync` - търси по Primary Key, използва cache
+   - `FirstOrDefaultAsync` - изпълнява WHERE заявка
+
+---
+
+### ProductService
+
+```csharp
+public async Task<List<Product>> GetAll()
+{
+    var products = _db.Products
+        .Include(p => p.Brand)
+        .Include(p => p.Categories)
+        .Include(p => p.ProductIngredients)
+            .ThenInclude(pi => pi.Ingredient);
+    return await products.ToListAsync();
+}
+```
+
+**Include и ThenInclude:**
+- `Include(p => p.Brand)` - зарежда свързания Brand (Eager Loading)
+- `ThenInclude(pi => pi.Ingredient)` - зарежда Ingredient през ProductIngredient
+
+**Защо Eager Loading?** Без Include, навигационните свойства са null. Lazy Loading е алтернатива, но може да причини N+1 Query проблем.
+
+### Search метод
+
+```csharp
+public async Task<List<Product>> Search(string? searchTerm, int? categoryId)
+{
+    var query = _db.Products
+        .Include(p => p.Brand)
+        .Include(p => p.Categories)
+        .Include(p => p.ProductIngredients)
+            .ThenInclude(pi => pi.Ingredient)
+        .AsQueryable();
+
+    if (!string.IsNullOrWhiteSpace(searchTerm))
+    {
+        var term = searchTerm.ToLower();
+        query = query.Where(p =>
+            p.Name.ToLower().Contains(term) ||
+            (p.Description != null && p.Description.ToLower().Contains(term)));
+    }
+
+    if (categoryId.HasValue)
+    {
+        query = query.Where(p => p.Categories.Any(c => c.Id == categoryId.Value));
+    }
+
+    return await query.ToListAsync();
+}
+```
+
+**Динамично изграждане на заявка:**
+1. Заявката се изгражда постепенно
+2. `AsQueryable()` - позволява добавяне на условия
+3. Филтрите се добавят само ако има стойност
+4. `ToListAsync()` - изпълнява заявката
+
+### Save метод с категории и съставки
+
+```csharp
+public async Task Save(Product product, IEnumerable<int>? categoryIds = null, 
+                       IEnumerable<ProductIngredient>? ingredients = null)
+{
+    if (product.Id > 0)
+    {
+        // За съществуващ продукт - изчистваме старите релации
+        await _db.Entry(product).Collection(p => p.Categories).LoadAsync();
+        await _db.Entry(product).Collection(p => p.ProductIngredients).LoadAsync();
+        product.Categories.Clear();
+        _db.ProductIngredients.RemoveRange(product.ProductIngredients);
+    }
+
+    if (categoryIds != null)
+    {
+        var ids = categoryIds.ToList();
+
+        // Автоматично добавяне на "Prescription drugs" категория
+        if (product.IsPrescriptionRequired)
+        {
+            var rxCat = await _db.Categories.FirstOrDefaultAsync(c => c.Name == "Prescription drugs");
+            if (rxCat != null && !ids.Contains(rxCat.Id))
+            {
+                ids.Add(rxCat.Id);
+            }
+            product.AvailableQuantity = 0; // Рецептурни продукти нямат наличност
+        }
+
+        var categories = await _db.Categories.Where(c => ids.Contains(c.Id)).ToListAsync();
+        foreach (var cat in categories)
+        {
+            product.Categories.Add(cat);
+        }
+    }
+
+    // ... добавяне на съставки ...
+
+    if (product.Id == 0)
+        _db.Products.Add(product);
+    else
+        _db.Products.Update(product);
+
+    await _db.SaveChangesAsync();
+}
+```
+
+**Бизнес логика:**
+1. При редакция - първо се изчистват старите релации
+2. Ако продуктът е рецептурен - автоматично се добавя категория "Prescription drugs"
+3. Рецептурни продукти имат наличност 0 (не се продават онлайн)
+
+---
+
+### OrderService
+
+```csharp
+public async Task<List<Order>> GetAll()
+{
+    var orders = _db.Orders
+        .Include(o => o.User)
+        .Include(o => o.OrderItems)
+            .ThenInclude(oi => oi.Product);
+    return await orders.OrderByDescending(o => o.OrderDate).ToListAsync();
+}
+```
+
+**Сортиране:** `OrderByDescending(o => o.OrderDate)` - най-новите поръчки първи.
+
+---
+
+## 5. Controllers и Request Flow
+
+### Какво е Controller?
+
+Controller е клас, който обработва HTTP заявки. Всеки метод (action) съответства на конкретен endpoint.
+
+### Структура на Controller
+
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class ProductsController : ControllerBase
+{
+    private readonly ProductService _productService;
+
+    public ProductsController(ProductService productService)
+    {
+        _productService = productService;
+    }
+}
+```
+
+**Атрибути:**
+- `[ApiController]` - Активира API-специфични функции (автоматична валидация, binding)
+- `[Route("api/[controller]")]` - URL = `/api/products`
+
+### AuthController - Автентикация
+
+```csharp
+[HttpPost("token")]
+public async Task<IActionResult> GetToken([FromBody] UserLoginDto dto)
+{
+    // 1. Търсим потребителя по username
+    var user = await _userService.GetByUsername(dto.Username);
+    if (user == null)
+        return Unauthorized();
+
+    // 2. Верифицираме паролата
+    var hasher = new PasswordHasher<User>();
+    var verify = hasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
+    if (verify != PasswordVerificationResult.Success)
+        return Unauthorized();
+
+    // 3. Създаваме JWT token
+    var token = _tokenService.CreateToken(user);
+
+    // 4. Връщаме отговор
+    return Ok(new AuthResponseDto
+    {
+        Token = token,
+        ExpiresAt = DateTime.UtcNow.AddHours(1),
+        Role = user.Role.ToString(),
+        UserId = user.Id
+    });
+}
+```
+
+**Flow на заявката:**
+1. Клиент изпраща POST към `/api/auth/token` с username и password
+2. Контролерът търси потребителя
+3. Верифицира паролата чрез `PasswordHasher`
+4. Генерира JWT token
+5. Връща token на клиента
+
+---
+
+### ProductsController
+
+#### GET /api/products
+
+```csharp
+[HttpGet]
+[AllowAnonymous]
+public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] int? categoryId)
+{
+    var products = await _productService.Search(search, categoryId);
+    return Ok(products.Select(MapToDto));
+}
+```
+
+**[AllowAnonymous]** - Endpoint-ът е достъпен без автентикация.
+
+**[FromQuery]** - Параметрите идват от URL query string: `/api/products?search=aspirin&categoryId=1`
+
+**MapToDto** - Преобразува Entity в DTO (Data Transfer Object).
+
+#### POST /api/products (Създаване)
+
+```csharp
+[HttpPost]
+[Authorize(Roles = "Administrator")]
+public async Task<IActionResult> Create([FromBody] ProductCreateFormDto dto)
+{
+    // Валидация на ingredients JSON
+    var ingredientDtos = ParseIngredients(dto.IngredientsJson);
+    if (ingredientDtos == null)
+        return BadRequest("Invalid ingredients format.");
+
+    // Проверка дали Brand съществува
+    var brand = await _brandService.GetById(dto.BrandId!.Value);
+    if (brand == null)
+        return BadRequest("Brand not found.");
+
+    // Създаване на Product entity
+    var product = new Product
+    {
+        Name = dto.Name,
+        PhotoUrl = dto.ImageUrl ?? "",
+        Price = dto.Price,
+        AvailableQuantity = dto.AvailableQuantity,
+        Description = dto.Description ?? "",
+        IsPrescriptionRequired = dto.IsPrescriptionRequired,
+        BrandId = dto.BrandId!.Value
+    };
+
+    // Запазване
+    await _productService.Save(product, dto.CategoryIds?.ToHashSet(), productIngredients);
+
+    // Връщане на резултат
+    return CreatedAtAction(nameof(GetById), new { id = product.Id }, MapToDto(saved!));
+}
+```
+
+**[Authorize(Roles = "Administrator")]** - Само администратори имат достъп.
+
+**CreatedAtAction** - Връща HTTP 201 Created с Location header.
+
+#### PATCH /api/products/{id}/quantity
+
+```csharp
+[HttpPatch("{id}/quantity")]
+[Authorize(Roles = "Administrator")]
+public async Task<IActionResult> SetQuantity(int id, [FromBody] int quantity)
+{
+    var product = await _productService.GetById(id);
+    if (product == null)
+        return NotFound();
+
+    if (product.IsPrescriptionRequired)
+        return BadRequest("Cannot set quantity for prescription products.");
+
+    if (quantity < 0)
+        return BadRequest("Quantity cannot be negative.");
+
+    product.AvailableQuantity = quantity;
+    await _productService.Save(product);
+    return NoContent();
+}
+```
+
+**Бизнес правила:**
+1. Рецептурни продукти не могат да имат наличност
+2. Количеството не може да е отрицателно
+
+---
+
+### OrdersController
+
+#### POST /api/orders (Създаване на поръчка)
+
+```csharp
+[HttpPost]
+[Authorize]
+public async Task<IActionResult> Create([FromBody] OrderCreateDto dto)
+{
+    // Администратори не могат да поръчват
+    if (IsAdmin())
+        return Forbid();
+
+    var userId = GetUserId();
+    if (userId == null)
+        return Unauthorized();
+
+    var orderItems = new List<OrderItem>();
+    decimal total = 0;
+
+    foreach (var item in dto.Items)
+    {
+        var product = await _productService.GetById(item.ProductId);
+
+        if (product == null)
+            return NotFound($"Product {item.ProductId} not found.");
+
+        // Бизнес правило: рецептурни продукти не се поръчват онлайн
+        if (product.IsPrescriptionRequired)
+            return BadRequest("Prescription products cannot be ordered online.");
+
+        // Проверка за наличност
+        if (product.AvailableQuantity < item.Quantity)
+            return BadRequest($"Insufficient stock for {product.Name}.");
+
+        // Добавяне на артикул
+        orderItems.Add(new OrderItem
+        {
+            ProductId = product.Id,
+            Quantity = item.Quantity,
+            UnitPrice = product.Price  // Запазваме текущата цена!
+        });
+
+        total += product.Price * item.Quantity;
+
+        // Намаляване на наличността
+        product.AvailableQuantity -= item.Quantity;
+        await _productService.Save(product);
+    }
+
+    var order = new Order
+    {
+        UserId = userId.Value,
+        OrderDate = DateTime.UtcNow,
+        Status = OrderStatus.Pending,
+        TotalPrice = total,
+        // ... delivery info ...
+        OrderItems = orderItems
+    };
+
+    await _orderService.Save(order);
+    return Ok(new OrderResponseDto(order.Id, order.TotalPrice, order.Status.ToString()));
+}
+```
+
+**Важна бизнес логика:**
+1. **UnitPrice** се запазва от текущата цена - важно за историческа точност
+2. **AvailableQuantity** се намалява при поръчка
+3. Рецептурни продукти не могат да се поръчват онлайн
+
+#### PATCH /api/orders/{id}/status
+
+```csharp
+[HttpPatch("{id}/status")]
+[Authorize(Roles = "Administrator")]
+public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusDto dto)
+{
+    var order = await _orderService.GetById(id);
+    if (order == null)
+        return NotFound();
+
+    if (!Enum.TryParse<OrderStatus>(dto.Status, true, out var newStatus))
+        return BadRequest("Invalid status value.");
+
+    // При отмяна - връщаме количествата
+    if (newStatus == OrderStatus.Cancelled && order.Status != OrderStatus.Cancelled)
+    {
+        foreach (var item in order.OrderItems)
+        {
+            if (item.Product != null)
+            {
+                item.Product.AvailableQuantity += item.Quantity;
+            }
+        }
+    }
+
+    order.Status = newStatus;
+    await _orderService.Save(order);
+    return Ok(new { message = "Order status updated", status = order.Status.ToString() });
+}
+```
+
+**Бизнес логика:** При отмяна на поръчка, количествата се връщат в склада.
+
+---
+
+### UserController
+
+#### POST /api/user (Регистрация)
+
+```csharp
+[HttpPost]
+[AllowAnonymous]
+public async Task<IActionResult> Create([FromBody] CreateUserDto dto)
+{
+    // Проверка за уникалност
+    var existing = await _userService.GetByUsername(dto.Username);
+    if (existing != null)
+        return Conflict("Username already taken.");
+
+    var user = new User
+    {
+        Username = dto.Username,
+        FirstName = dto.FirstName,
+        LastName = dto.LastName,
+        Role = UserRoles.Customer  // Винаги Customer!
+    };
+
+    // Хеширане на паролата
+    var hasher = new PasswordHasher<User>();
+    user.PasswordHash = hasher.HashPassword(user, dto.Password);
+
+    await _userService.Save(user);
+
+    return CreatedAtAction(nameof(GetById), new { id = user.Id },
+        new UserResponse(user.Id, user.Username, user.FirstName, user.LastName, user.Role.ToString()));
+}
+```
+
+**Сигурност:** Новите потребители винаги са `Customer`. Само администратор може да създаде друг администратор чрез `/api/user/create-admin`.
+
+---
+
+## 6. Автентикация и Авторизация (JWT)
+
+### Какво е JWT?
+
+**JSON Web Token** е стандарт за безопасно предаване на информация като JSON обект. Състои се от три части:
+
+```
+xxxxx.yyyyy.zzzzz
+Header.Payload.Signature
+```
+
+### TokenService
+
+```csharp
+public class TokenService : ITokenService
+{
+    private readonly IConfiguration _config;
+
+    public TokenService(IConfiguration config)
+    {
+        _config = config;
+    }
+
+    public string CreateToken(User user)
+    {
+        var key = _config["Jwt:Key"];
+        var issuer = _config["Jwt:Issuer"];
+        var audience = _config["Jwt:Audience"];
+
+        var claims = new List<Claim>
+        {
+            new Claim("sub", user.Id.ToString()),
+            new Claim("username", user.Username),
+            new Claim("firstName", user.FirstName),
+            new Claim("lastName", user.LastName),
+            new Claim("role", user.Role.ToString())
+        };
+
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: credentials
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+}
+```
+
+**Claims** - Информация, вградена в токена:
+- `sub` - Subject (User ID)
+- `role` - Роля на потребителя
+
+### Конфигурация в Program.cs
+
+```csharp
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,       // Проверява кой е издал токена
+            ValidateAudience = true,     // Проверява за кого е предназначен
+            ValidateLifetime = true,     // Проверява дали не е изтекъл
+            ValidateIssuerSigningKey = true,  // Проверява подписа
+            ValidIssuer = issuer,
+            ValidAudience = audience,
+            IssuerSigningKey = signingKey
+        };
+    });
+```
+
+### Как работи авторизацията?
+
+1. **[Authorize]** - Изисква валиден JWT token
+2. **[Authorize(Roles = "Administrator")]** - Изисква роля "Administrator" в токена
+3. **[AllowAnonymous]** - Позволява достъп без токен
+
+### ITokenService Interface
+
+```csharp
+public interface ITokenService
+{
+    string CreateToken(User user);
+}
+```
+
+**Защо interface?**
+1. **Testability** - Лесно се mock-ва в unit тестове
+2. **Flexibility** - Може да се смени имплементацията
+3. **Dependency Inversion** - Зависимост от абстракция, не от конкретна реализация
+
+---
+
+## 7. Валидация с FluentValidation
+
+### Какво е FluentValidation?
+
+FluentValidation е библиотека за изграждане на **силно типизирани** правила за валидация. По-четима е от Data Annotations.
+
+### Пример: CreateUserDtoValidator
+
+```csharp
+public class CreateUserDtoValidator : AbstractValidator<CreateUserDto>
+{
+    public CreateUserDtoValidator()
+    {
+        RuleFor(x => x.Username)
+            .NotEmpty().WithMessage("Username is required")
+            .MinimumLength(3).WithMessage("Username must be at least 3 characters")
+            .MaximumLength(50).WithMessage("Username cannot exceed 50 characters")
+            .Matches(@"^[a-zA-Z0-9_]+$").WithMessage("Username can only contain letters, numbers, and underscores");
+
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Password is required")
+            .MinimumLength(4).WithMessage("Password must be at least 4 characters")
+            .MaximumLength(100).WithMessage("Password cannot exceed 100 characters");
+
+        RuleFor(x => x.FirstName)
+            .MaximumLength(50).WithMessage("First name cannot exceed 50 characters");
+
+        RuleFor(x => x.LastName)
+            .MaximumLength(50).WithMessage("Last name cannot exceed 50 characters");
+    }
+}
+```
+
+### OrderCreateDtoValidator с вложена валидация
+
+```csharp
+public class OrderCreateDtoValidator : AbstractValidator<OrderCreateDto>
+{
+    public OrderCreateDtoValidator()
+    {
+        RuleFor(x => x.Items)
+            .NotEmpty().WithMessage("Order must contain at least one item");
+
+        // Валидация на всеки артикул
+        RuleForEach(x => x.Items).SetValidator(new OrderItemCreateDtoValidator());
+
+        RuleFor(x => x.DeliveryAddress)
+            .NotEmpty().WithMessage("Delivery address is required")
+            .MaximumLength(200).WithMessage("Delivery address cannot exceed 200 characters");
+        // ... други правила ...
+    }
+}
+```
+
+**RuleForEach** - Прилага валидатор към всеки елемент от колекция.
+
+### Custom валидация
+
+```csharp
+public class UpdateOrderStatusDtoValidator : AbstractValidator<UpdateOrderStatusDto>
+{
+    public UpdateOrderStatusDtoValidator()
+    {
+        RuleFor(x => x.Status)
+            .NotEmpty().WithMessage("Status is required")
+            .Must(BeValidStatus).WithMessage("Invalid order status...");
+    }
+
+    private bool BeValidStatus(string status)
+    {
+        return Enum.TryParse<OrderStatus>(status, true, out _);
+    }
+}
+```
+
+**Must** - Позволява custom валидационна логика.
+
+### Регистрация в Program.cs
+
+```csharp
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+```
+
+**AddFluentValidationAutoValidation** - Автоматично валидира DTO обектите преди достъпване до контролера.
+
+---
+
+## 8. Program.cs - Стартиране на приложението
+
+### Пълен анализ
+
+```csharp
+// Културни настройки за консистентност
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// 1. Регистрация на Controllers
+builder.Services.AddControllers();
+
+// 2. FluentValidation
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+// 3. Swagger за API документация
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c => { /* JWT конфигурация */ });
+
+// 4. CORS - Cross-Origin Resource Sharing
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", /* други портове */)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
+// 5. DbContext
+builder.Services.AddDbContext<ApplicationDbContext>();
+
+// 6. Services - Dependency Injection
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IngredientService>();
+builder.Services.AddScoped<CategoryService>();
+builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<OrderService>();
+builder.Services.AddScoped<BrandService>();
+
+// 7. JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options => { /* validation parameters */ });
+
+builder.Services.AddAuthorization();
+
+var app = builder.Build();
+
+// Middleware Pipeline
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseCors("AllowReactApp");
+app.UseAuthentication();  // Кой си?
+app.UseAuthorization();   // Какво можеш да правиш?
+
+app.MapControllers();
+
+// Seed на администратор
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+    if (!db.Users.Any(u => u.Username == "admin"))
+    {
+        var admin = new User
+        {
+            Username = "admin",
+            FirstName = "Admin",
+            LastName = "User",
+            Role = UserRoles.Administrator
+        };
+
+        var hasher = new PasswordHasher<User>();
+        admin.PasswordHash = hasher.HashPassword(admin, "admin");
+
+        db.Users.Add(admin);
+        db.SaveChanges();
+    }
+}
+
+app.Run();
+```
+
+### Service Lifetimes
+
+```csharp
+builder.Services.AddScoped<UserService>();
+```
+
+**Scoped** - Създава се нова инстанция за всяка HTTP заявка. Това е правилният избор за:
+- Services, които работят с DbContext
+- DbContext (който също е Scoped по подразбиране)
+
+**Други варианти:**
+- **Transient** - Нова инстанция при всяко извикване
+- **Singleton** - Една инстанция за цялото приложение
+
+### Middleware Pipeline Order
+
+```
+Request → CORS → Authentication → Authorization → Controller → Response
+```
+
+**Редът е важен!** Authentication трябва да е преди Authorization.
+
+---
+
+## 9. Често допускани грешки от студенти
+
+### 1. Съхраняване на пароли в чист текст
+
+❌ **Грешно:**
+```csharp
+user.Password = dto.Password;
+```
+
+✅ **Правилно:**
+```csharp
+var hasher = new PasswordHasher<User>();
+user.PasswordHash = hasher.HashPassword(user, dto.Password);
+```
+
+### 2. N+1 Query проблем
+
+❌ **Грешно:**
+```csharp
+var products = await _db.Products.ToListAsync();
+foreach (var p in products)
+{
+    Console.WriteLine(p.Brand.Name); // Допълнителна заявка за всеки продукт!
+}
+```
+
+✅ **Правилно:**
+```csharp
+var products = await _db.Products.Include(p => p.Brand).ToListAsync();
+```
+
+### 3. Синхронни операции в async методи
+
+❌ **Грешно:**
+```csharp
+public async Task<List<User>> GetAll()
+{
+    return _db.Users.ToList(); // Блокира thread-а!
+}
+```
+
+✅ **Правилно:**
+```csharp
+public async Task<List<User>> GetAll()
+{
+    return await _db.Users.ToListAsync();
+}
+```
+
+### 4. Връщане на Entity вместо DTO
+
+❌ **Грешно:**
+```csharp
+return Ok(product); // Изтича чувствителна информация + циклични референции
+```
+
+✅ **Правилно:**
+```csharp
+return Ok(MapToDto(product));
+```
+
+### 5. Липса на валидация преди операции
+
+❌ **Грешно:**
+```csharp
+[HttpDelete("{id}")]
+public async Task<IActionResult> Delete(int id)
+{
+    await _productService.Delete(id); // Какво ако не съществува?
+    return NoContent();
+}
+```
+
+✅ **Правилно:**
+```csharp
+[HttpDelete("{id}")]
+public async Task<IActionResult> Delete(int id)
+{
+    var product = await _productService.GetById(id);
+    if (product == null)
+        return NotFound();
+    
+    await _productService.Delete(product);
+    return NoContent();
+}
+```
+
+### 6. Хардкоднати connection strings
+
+❌ **Грешно:**
+```csharp
+optionsBuilder.UseSqlServer("Server=...;Password=MyPassword123;");
+```
+
+✅ **Правилно:**
+Използвай `appsettings.json` или environment variables.
+
+### 7. Неправилно използване на async/await
+
+❌ **Грешно:**
+```csharp
+public Task<User> GetById(int id)
+{
+    return _db.Users.FindAsync(id).AsTask(); // Не await-ваш!
+}
+```
+
+✅ **Правилно:**
+```csharp
+public async Task<User?> GetById(int id)
+{
+    return await _db.Users.FindAsync(id);
+}
+```
+
+### 8. Липса на авторизация
+
+❌ **Грешно:**
+```csharp
+[HttpDelete("{id}")]
+public async Task<IActionResult> Delete(int id)
+{
+    // Всеки може да изтрие!
+}
+```
+
+✅ **Правилно:**
+```csharp
+[HttpDelete("{id}")]
+[Authorize(Roles = "Administrator")]
+public async Task<IActionResult> Delete(int id)
+{
+    // Само администратори
+}
+```
+
+### 9. Смесване на concerns
+
+❌ **Грешно:**
+```csharp
+// Controller съдържа бизнес логика + достъп до БД
+[HttpPost]
+public async Task<IActionResult> Create(ProductDto dto)
+{
+    var product = new Product { ... };
+    _db.Products.Add(product);
+    await _db.SaveChangesAsync();
+}
+```
+
+✅ **Правилно:**
+Използвай Service layer.
+
+### 10. Не се грижиш за transactions
+
+❌ **Проблем в текущия код:**
+```csharp
+// Ако SaveChanges след намаляване на quantity се провали,
+// промените по product остават
+foreach (var item in dto.Items)
+{
+    product.AvailableQuantity -= item.Quantity;
+    await _productService.Save(product); // Отделен SaveChanges
+}
+await _orderService.Save(order); // Друг SaveChanges
+```
+
+✅ **По-добре:**
+Използвай `IDbContextTransaction` или Unit of Work pattern.
+
+---
+
+## Обобщение
+
+Този проект демонстрира **типична трислойна архитектура**:
+
+1. **Presentation Layer** (Controllers) - HTTP endpoints
+2. **Business Logic Layer** (Services) - Бизнес правила
+3. **Data Access Layer** (DbContext + Entities) - Достъп до данни
+
+**Ключови концепции:**
+- Dependency Injection
+- Repository/Service pattern
+- JWT автентикация
+- FluentValidation
+- Entity Framework Core с Code-First подход
+- DTO pattern за трансфер на данни
+
+**За изпита помни:**
+1. Обясни **защо** се прави нещо, не само **какво**
+2. Познавай разликата между Entity и DTO
+3. Разбирай релациите между таблиците
+4. Знай как работи JWT
+5. Обясни middleware pipeline-а
+6. Споменавай добри практики и потенциални подобрения

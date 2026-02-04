@@ -22,29 +22,10 @@ const baseColors = [
   { h: 174, s: 84, l: 40 },  // Teal
 ];
 
-// Generate color based on root ancestor and depth level
-const getCategoryColor = (category, categories, level = 0) => {
-  let rootId = category.id;
-  let current = category;
-  let depth = 0;
-  
-  while (current.parentCategoryId) {
-    const parent = categories.find(c => c.id === current.parentCategoryId);
-    if (!parent) break;
-    current = parent;
-    rootId = parent.id;
-    depth++;
-  }
-  
-  const base = baseColors[rootId % baseColors.length];
-  const lightnessAdjust = depth * 8;
-  const saturationAdjust = depth * 5;
-  
-  const h = base.h;
-  const s = Math.max(30, base.s - saturationAdjust);
-  const l = Math.min(75, base.l + lightnessAdjust);
-  
-  return `hsl(${h}, ${s}%, ${l}%)`;
+// Generate color based on category id
+const getCategoryColor = (category) => {
+  const base = baseColors[category.id % baseColors.length];
+  return `hsl(${base.h}, ${base.s}%, ${base.l}%)`;
 };
 
 function UserDashboard() {
@@ -141,30 +122,13 @@ function UserDashboard() {
     localStorage.setItem('basket', JSON.stringify(newBasket));
   };
 
-  // Get a category and all its descendant (child) category IDs
-  const getCategoryAndDescendants = (categoryId) => {
-    const ids = [parseInt(categoryId)];
-    const findChildren = (parentId) => {
-      categories.filter(c => c.parentCategoryId === parentId).forEach(child => {
-        ids.push(child.id);
-        findChildren(child.id);
-      });
-    };
-    findChildren(parseInt(categoryId));
-    return ids;
-  };
-
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           product.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // When filtering by category, include products that belong to:
-    // 1. The selected category itself
-    // 2. Any descendant (child) categories of the selected category
     let matchesCategory = !selectedCategory;
     if (selectedCategory && product.categoryIds) {
-      const selectedAndDescendants = getCategoryAndDescendants(selectedCategory);
-      matchesCategory = product.categoryIds.some(catId => selectedAndDescendants.includes(catId));
+      matchesCategory = product.categoryIds.includes(parseInt(selectedCategory));
     }
     
     return matchesSearch && matchesCategory;
@@ -360,41 +324,10 @@ function UserDashboard() {
     });
   };
 
-  // Build category hierarchy
-  const buildCategoryTree = (cats, parentId = null) => {
-    return cats
-      .filter(c => c.parentCategoryId === parentId)
-      .map(c => ({
-        ...c,
-        children: buildCategoryTree(cats, c.id)
-      }));
-  };
-
-  const categoryTree = buildCategoryTree(categories);
-
-  // Flatten tree for dropdown with depth info
-  const flattenTree = (tree, depth = 0) => {
-    let result = [];
-    tree.forEach(cat => {
-      result.push({ ...cat, depth });
-      if (cat.children && cat.children.length > 0) {
-        result = result.concat(flattenTree(cat.children, depth + 1));
-      }
-    });
-    return result;
-  };
-
-  const flatCategories = flattenTree(categoryTree);
-
-  // Get category hierarchy path (e.g., "Parent > Child > Grandchild")
-  const getCategoryPath = (categoryId) => {
-    const path = [];
-    let current = categories.find(c => c.id === parseInt(categoryId));
-    while (current) {
-      path.unshift(current.name);
-      current = categories.find(c => c.id === current.parentCategoryId);
-    }
-    return path;
+  // Get category name
+  const getCategoryName = (categoryId) => {
+    const category = categories.find(c => c.id === parseInt(categoryId));
+    return category ? category.name : '';
   };
 
   // Handle ingredient click to show details
@@ -471,81 +404,17 @@ function UserDashboard() {
                   <span className="category-dot" style={{ background: '#a78bfa' }}></span>
                   All Categories
                 </div>
-                {categoryTree.map(parentCat => (
-                  <div key={parentCat.id}>
-                    <div
-                      className={`dropdown-item depth-0 ${selectedCategory === parentCat.id.toString() ? 'active' : ''} ${parentCat.children?.length > 0 ? 'has-children' : ''}`}
-                    >
-                      <span 
-                        className="category-dot" 
-                        style={{ background: getCategoryColor(parentCat, categories) }}
-                        onClick={() => { setSelectedCategory(parentCat.id.toString()); setShowCategoryDropdown(false); }}
-                      ></span>
-                      <span 
-                        className="category-name"
-                        onClick={() => { setSelectedCategory(parentCat.id.toString()); setShowCategoryDropdown(false); }}
-                      >
-                        {parentCat.name}
-                      </span>
-                      {parentCat.children?.length > 0 && (
-                        <span 
-                          className={`expand-arrow ${expandedCategories.includes(parentCat.id) ? 'expanded' : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExpandedCategories(prev => 
-                              prev.includes(parentCat.id) 
-                                ? prev.filter(id => id !== parentCat.id)
-                                : [...prev, parentCat.id]
-                            );
-                          }}
-                        >▶</span>
-                      )}
-                    </div>
-                    {expandedCategories.includes(parentCat.id) && parentCat.children?.map(childCat => (
-                      <div key={childCat.id}>
-                        <div
-                          className={`dropdown-item depth-1 ${selectedCategory === childCat.id.toString() ? 'active' : ''} ${childCat.children?.length > 0 ? 'has-children' : ''}`}
-                        >
-                          <span 
-                            className="category-dot" 
-                            style={{ background: getCategoryColor(childCat, categories) }}
-                            onClick={() => { setSelectedCategory(childCat.id.toString()); setShowCategoryDropdown(false); }}
-                          ></span>
-                          <span 
-                            className="category-name"
-                            onClick={() => { setSelectedCategory(childCat.id.toString()); setShowCategoryDropdown(false); }}
-                          >
-                            {childCat.name}
-                          </span>
-                          {childCat.children?.length > 0 && (
-                            <span 
-                              className={`expand-arrow ${expandedCategories.includes(childCat.id) ? 'expanded' : ''}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExpandedCategories(prev => 
-                                  prev.includes(childCat.id) 
-                                    ? prev.filter(id => id !== childCat.id)
-                                    : [...prev, childCat.id]
-                                );
-                              }}
-                            >▶</span>
-                          )}
-                        </div>
-                        {expandedCategories.includes(childCat.id) && childCat.children?.map(grandchildCat => (
-                          <div
-                            key={grandchildCat.id}
-                            className={`dropdown-item depth-2 ${selectedCategory === grandchildCat.id.toString() ? 'active' : ''}`}
-                            onClick={() => { setSelectedCategory(grandchildCat.id.toString()); setShowCategoryDropdown(false); }}
-                          >
-                            <span 
-                              className="category-dot" 
-                              style={{ background: getCategoryColor(grandchildCat, categories) }}
-                            ></span>
-                            {grandchildCat.name}
-                          </div>
-                        ))}
-                      </div>
-                    ))}
+                {categories.map(cat => (
+                  <div
+                    key={cat.id}
+                    className={`dropdown-item ${selectedCategory === cat.id.toString() ? 'active' : ''}`}
+                    onClick={() => { setSelectedCategory(cat.id.toString()); setShowCategoryDropdown(false); }}
+                  >
+                    <span 
+                      className="category-dot" 
+                      style={{ background: getCategoryColor(cat) }}
+                    ></span>
+                    {cat.name}
                   </div>
                 ))}
               </div>
@@ -577,12 +446,7 @@ function UserDashboard() {
       {selectedCategory && (
         <div className="category-banner">
           <div className="category-path">
-            {getCategoryPath(selectedCategory).map((name, index, arr) => (
-              <span key={index}>
-                {index > 0 && <span className="path-separator">›</span>}
-                <span className={index === arr.length - 1 ? 'current-category' : 'parent-category'}>{name}</span>
-              </span>
-            ))}
+            <span className="current-category">{getCategoryName(selectedCategory)}</span>
           </div>
           <button 
             className="clear-filter-btn"

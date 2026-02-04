@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { categoryService } from '../services/categoryService';
 import './CategoryManagement.css';
 
-// Base color palette for root categories
+// Base color palette for categories
 const baseColors = [
   { h: 262, s: 83, l: 58 },  // Purple
   { h: 217, s: 91, l: 60 },  // Blue
@@ -17,32 +17,12 @@ const baseColors = [
   { h: 174, s: 84, l: 40 },  // Teal
 ];
 
-// Generate color based on root ancestor and depth level
-const getCategoryColor = (category, categories, level = 0) => {
-  // Find root ancestor
-  let rootId = category.id;
-  let current = category;
-  let depth = 0;
-  
-  while (current.parentCategoryId) {
-    const parent = categories.find(c => c.id === current.parentCategoryId);
-    if (!parent) break;
-    current = parent;
-    rootId = parent.id;
-    depth++;
-  }
-  
-  // Get base color from root's ID
-  const base = baseColors[rootId % baseColors.length];
-  
-  // Adjust lightness and saturation based on depth
-  // Children get progressively lighter and slightly less saturated
-  const lightnessAdjust = depth * 8;  // Each level gets 8% lighter
-  const saturationAdjust = depth * 5; // Each level gets 5% less saturated
-  
+// Generate color based on category id
+const getCategoryColor = (category) => {
+  const base = baseColors[category.id % baseColors.length];
   const h = base.h;
-  const s = Math.max(30, base.s - saturationAdjust);
-  const l = Math.min(75, base.l + lightnessAdjust);
+  const s = base.s;
+  const l = base.l;
   
   return {
     bg: `hsla(${h}, ${s}%, ${l}%, 0.2)`,
@@ -57,7 +37,6 @@ function CategoryManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [expandedCategories, setExpandedCategories] = useState(new Set());
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -65,7 +44,7 @@ function CategoryManagement() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   
   // Form states
-  const [formData, setFormData] = useState({ name: '', parentCategoryId: '' });
+  const [formData, setFormData] = useState({ name: '' });
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -78,9 +57,6 @@ function CategoryManagement() {
       setLoading(true);
       const data = await categoryService.getAll();
       setCategories(data);
-      // Expand all root categories by default
-      const rootIds = data.filter(c => !c.parentCategoryId).map(c => c.id);
-      setExpandedCategories(new Set(rootIds));
       setError('');
     } catch (err) {
       setError(err.message);
@@ -89,82 +65,25 @@ function CategoryManagement() {
     }
   };
 
-  // Build hierarchical structure
-  const buildTree = (cats, parentId = null) => {
-    return cats
-      .filter(c => c.parentCategoryId === parentId)
-      .map(c => ({
-        ...c,
-        children: buildTree(cats, c.id)
-      }));
-  };
-
-  const categoryTree = buildTree(categories);
-
   // Filter categories based on search
-  const filterCategories = (tree, term) => {
-    if (!term) return tree;
-    
-    const matchesSearch = (cat) => 
-      cat.name.toLowerCase().includes(term.toLowerCase());
-    
-    const filterNode = (node) => {
-      const childMatches = node.children.map(filterNode).filter(Boolean);
-      if (matchesSearch(node) || childMatches.length > 0) {
-        return { ...node, children: childMatches };
-      }
-      return null;
-    };
-    
-    return tree.map(filterNode).filter(Boolean);
-  };
+  const filteredCategories = categories.filter(cat =>
+    cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const filteredTree = filterCategories(categoryTree, searchTerm);
-
-  const toggleExpand = (id) => {
-    setExpandedCategories(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const expandAll = () => {
-    const allIds = categories.map(c => c.id);
-    setExpandedCategories(new Set(allIds));
-  };
-
-  const collapseAll = () => {
-    setExpandedCategories(new Set());
-  };
-
-  const handleAdd = (parentId = null) => {
-    setFormData({ name: '', parentCategoryId: parentId || '' });
+  const handleAdd = () => {
+    setFormData({ name: '' });
     setFormError('');
     setShowAddModal(true);
   };
 
   const handleEdit = (category) => {
     setSelectedCategory(category);
-    setFormData({ 
-      name: category.name, 
-      parentCategoryId: category.parentCategoryId || ''
-    });
+    setFormData({ name: category.name });
     setFormError('');
     setShowEditModal(true);
   };
 
   const handleDelete = async (category) => {
-    const hasChildren = categories.some(c => c.parentCategoryId === category.id);
-    if (hasChildren) {
-      alert('Cannot delete category with subcategories. Delete subcategories first.');
-      return;
-    }
-    
     if (!confirm(`Are you sure you want to delete "${category.name}"?`)) return;
     
     try {
@@ -187,8 +106,7 @@ function CategoryManagement() {
     try {
       setSubmitting(true);
       await categoryService.create({
-        name: formData.name,
-        parentCategoryId: formData.parentCategoryId || null
+        name: formData.name
       });
       setShowAddModal(false);
       await fetchCategories();
@@ -208,17 +126,10 @@ function CategoryManagement() {
       return;
     }
 
-    // Prevent setting self as parent
-    if (formData.parentCategoryId && parseInt(formData.parentCategoryId) === selectedCategory.id) {
-      setFormError('Category cannot be its own parent');
-      return;
-    }
-
     try {
       setSubmitting(true);
       await categoryService.update(selectedCategory.id, {
-        name: formData.name,
-        parentCategoryId: formData.parentCategoryId || null
+        name: formData.name
       });
       setShowEditModal(false);
       await fetchCategories();
@@ -233,50 +144,20 @@ function CategoryManagement() {
     setSearchTerm('');
   };
 
-  // Get parent categories for dropdown (exclude current category and its descendants)
-  const getAvailableParents = (excludeId = null) => {
-    if (!excludeId) return categories;
-    
-    const getDescendantIds = (id) => {
-      const descendants = [id];
-      categories.filter(c => c.parentCategoryId === id).forEach(child => {
-        descendants.push(...getDescendantIds(child.id));
-      });
-      return descendants;
-    };
-    
-    const excludeIds = getDescendantIds(excludeId);
-    return categories.filter(c => !excludeIds.includes(c.id));
-  };
-
-  // Render category tree item
-  const renderCategoryItem = (category, level = 0) => {
-    const color = getCategoryColor(category, categories, level);
-    const hasChildren = category.children && category.children.length > 0;
-    const isExpanded = expandedCategories.has(category.id);
+  // Render category item
+  const renderCategoryItem = (category) => {
+    const color = getCategoryColor(category);
 
     return (
       <div key={category.id} className="category-tree-item">
         <div 
           className="category-row"
           style={{ 
-            marginLeft: `${level * 24}px`,
             background: color.bg,
             borderColor: color.border
           }}
         >
           <div className="category-left">
-            {hasChildren ? (
-              <button 
-                className="expand-button"
-                onClick={() => toggleExpand(category.id)}
-                style={{ color: color.text }}
-              >
-                {isExpanded ? '▼' : '▶'}
-              </button>
-            ) : (
-              <span className="expand-placeholder"></span>
-            )}
             <span 
               className="category-color-dot"
               style={{ background: color.text }}
@@ -284,20 +165,8 @@ function CategoryManagement() {
             <span className="category-name" style={{ color: color.text }}>
               {category.name}
             </span>
-            {hasChildren && (
-              <span className="child-count" style={{ color: color.text }}>
-                ({category.children.length})
-              </span>
-            )}
           </div>
           <div className="category-actions">
-            <button 
-              className="add-child-button"
-              onClick={() => handleAdd(category.id)}
-              title="Add subcategory"
-            >
-              + Sub
-            </button>
             <button 
               className="edit-button"
               onClick={() => handleEdit(category)}
@@ -312,11 +181,6 @@ function CategoryManagement() {
             </button>
           </div>
         </div>
-        {hasChildren && isExpanded && (
-          <div className="category-children">
-            {category.children.map(child => renderCategoryItem(child, level + 1))}
-          </div>
-        )}
       </div>
     );
   };
@@ -338,7 +202,7 @@ function CategoryManagement() {
           </button>
           <h1>Category Management</h1>
         </div>
-        <button className="add-category-button" onClick={() => handleAdd()}>
+        <button className="add-category-button" onClick={handleAdd}>
           + Add Category
         </button>
       </div>
@@ -360,24 +224,20 @@ function CategoryManagement() {
             <button className="search-clear" onClick={clearSearch}>×</button>
           )}
         </div>
-        <div className="tree-controls">
-          <button className="control-button" onClick={expandAll}>Expand All</button>
-          <button className="control-button" onClick={collapseAll}>Collapse All</button>
-        </div>
         <span className="search-results-count">
-          {categories.length} categories
+          {filteredCategories.length} categories
         </span>
       </div>
 
-      {/* Category Tree */}
+      {/* Category List */}
       <div className="categories-tree-container">
-        {filteredTree.length === 0 ? (
+        {filteredCategories.length === 0 ? (
           <div className="empty-state">
             {searchTerm ? 'No categories match your search' : 'No categories found. Add your first category!'}
           </div>
         ) : (
           <div className="category-tree">
-            {filteredTree.map(category => renderCategoryItem(category))}
+            {filteredCategories.map(category => renderCategoryItem(category))}
           </div>
         )}
       </div>
@@ -387,20 +247,11 @@ function CategoryManagement() {
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{formData.parentCategoryId ? 'Add Subcategory' : 'Add New Category'}</h2>
+              <h2>Add New Category</h2>
               <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
             </div>
             <form className="category-form" onSubmit={handleSubmitAdd}>
               {formError && <div className="form-error">{formError}</div>}
-              
-              {formData.parentCategoryId && (
-                <div className="parent-info">
-                  <span className="parent-label">Parent:</span>
-                  <span className="parent-name">
-                    {categories.find(c => c.id === formData.parentCategoryId)?.name}
-                  </span>
-                </div>
-              )}
 
               <div className="form-group">
                 <label>Category Name</label>
@@ -412,21 +263,6 @@ function CategoryManagement() {
                   autoFocus
                 />
               </div>
-
-              {!formData.parentCategoryId && (
-                <div className="form-group">
-                  <label>Parent Category (Optional)</label>
-                  <select
-                    value={formData.parentCategoryId}
-                    onChange={(e) => setFormData({ ...formData, parentCategoryId: e.target.value })}
-                  >
-                    <option value="">None (Root Category)</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
 
               <div className="form-actions">
                 <button 
@@ -469,19 +305,6 @@ function CategoryManagement() {
                   placeholder="Enter category name"
                   autoFocus
                 />
-              </div>
-
-              <div className="form-group">
-                <label>Parent Category</label>
-                <select
-                  value={formData.parentCategoryId}
-                  onChange={(e) => setFormData({ ...formData, parentCategoryId: e.target.value })}
-                >
-                  <option value="">None (Root Category)</option>
-                  {getAvailableParents(selectedCategory?.id).map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.name}</option>
-                  ))}
-                </select>
               </div>
 
               <div className="form-actions">

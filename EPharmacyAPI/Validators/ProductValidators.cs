@@ -12,6 +12,8 @@ public class ProductCreateFormDtoValidator : AbstractValidator<ProductCreateForm
         RuleFor(x => x.Price).GreaterThan(0).WithMessage("Price must be greater than 0");
         RuleFor(x => x.AvailableQuantity).GreaterThanOrEqualTo(0).WithMessage("Available quantity cannot be negative!");
         RuleFor(x => x.Description).MaximumLength(2000).WithMessage("Description cannot exceed 2000 characters");
+        RuleFor(x => x.BrandId).NotNull().WithMessage("Brand is required")
+            .GreaterThan(0).WithMessage("Please select a valid brand");
     }
 }
 
@@ -25,6 +27,8 @@ public class ProductUpdateFormDtoValidator : AbstractValidator<ProductUpdateForm
         RuleFor(x => x.AvailableQuantity)
             .GreaterThanOrEqualTo(0).WithMessage("Available quantity cannot be negative");
         RuleFor(x => x.Description).MaximumLength(2000).WithMessage("Description cannot exceed 2000 characters");
+        RuleFor(x => x.BrandId).NotNull().WithMessage("Brand is required")
+            .GreaterThan(0).WithMessage("Please select a valid brand");
     }
 }
 

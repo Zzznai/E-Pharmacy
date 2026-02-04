@@ -97,20 +97,6 @@ function ProductManagement() {
     !formData.ingredients.some(added => added.ingredientId === ing.id)
   );
 
-  // Filter categories based on search
-  const filterCategoryTree = (tree, search) => {
-    if (!search) return tree;
-    const searchLower = search.toLowerCase();
-    return tree.filter(cat => {
-      const matches = cat.name.toLowerCase().includes(searchLower);
-      const hasMatchingChildren = cat.children && filterCategoryTree(cat.children, search).length > 0;
-      return matches || hasMatchingChildren;
-    }).map(cat => ({
-      ...cat,
-      children: cat.children ? filterCategoryTree(cat.children, search) : []
-    }));
-  };
-
   const resetForm = () => {
     setFormData({
       name: '',
@@ -225,48 +211,19 @@ function ProductManagement() {
     }));
   };
 
-  // Get all parent category IDs for a given category
-  const getParentCategoryIds = (categoryId) => {
-    const parentIds = [];
-    let current = categories.find(c => c.id === categoryId);
-    while (current && current.parentCategoryId) {
-      parentIds.push(current.parentCategoryId);
-      current = categories.find(c => c.id === current.parentCategoryId);
-    }
-    return parentIds;
-  };
-
-  // Get all child category IDs for a given category
-  const getChildCategoryIds = (categoryId) => {
-    const childIds = [];
-    const findChildren = (parentId) => {
-      categories.filter(c => c.parentCategoryId === parentId).forEach(child => {
-        childIds.push(child.id);
-        findChildren(child.id);
-      });
-    };
-    findChildren(categoryId);
-    return childIds;
-  };
-
   const handleCategoryToggle = (categoryId) => {
     setFormData(prev => {
       const isCurrentlySelected = prev.categoryIds.includes(categoryId);
       
       if (isCurrentlySelected) {
-        // When deselecting, also deselect all children
-        const childIds = getChildCategoryIds(categoryId);
         return {
           ...prev,
-          categoryIds: prev.categoryIds.filter(id => id !== categoryId && !childIds.includes(id))
+          categoryIds: prev.categoryIds.filter(id => id !== categoryId)
         };
       } else {
-        // When selecting, also select all parents
-        const parentIds = getParentCategoryIds(categoryId);
-        const newIds = [...prev.categoryIds, categoryId, ...parentIds];
         return {
           ...prev,
-          categoryIds: [...new Set(newIds)] // Remove duplicates
+          categoryIds: [...prev.categoryIds, categoryId]
         };
       }
     });
@@ -354,69 +311,32 @@ function ProductManagement() {
     return category?.name || 'Unknown';
   };
 
-  // Build category tree for display
-  const buildCategoryTree = (parentId = null, level = 0) => {
-    return categories
-      .filter(c => c.parentCategoryId === parentId)
-      .map(category => ({
-        ...category,
-        level,
-        children: buildCategoryTree(category.id, level + 1)
-      }));
+  // Filter categories based on search
+  const getFilteredCategories = (search = '') => {
+    if (!search) return categories;
+    return categories.filter(cat => 
+      cat.name.toLowerCase().includes(search.toLowerCase())
+    );
   };
 
-  const flattenCategoryTree = (tree, result = []) => {
-    tree.forEach(item => {
-      result.push(item);
-      if (item.children.length > 0) {
-        flattenCategoryTree(item.children, result);
-      }
-    });
-    return result;
-  };
+  // Render category list
+  const renderCategoryList = (search = '') => {
+    const filteredCategories = getFilteredCategories(search);
 
-  const categoryTreeFlat = flattenCategoryTree(buildCategoryTree());
-  const categoryTreeHierarchical = buildCategoryTree();
-
-  // Render category tree recursively
-  const renderCategoryTree = (tree, search = '') => {
-    const filteredTree = search 
-      ? tree.filter(cat => {
-          const matches = cat.name.toLowerCase().includes(search.toLowerCase());
-          const hasMatchingChildren = cat.children && cat.children.some(child => 
-            child.name.toLowerCase().includes(search.toLowerCase()) ||
-            (child.children && child.children.length > 0)
-          );
-          return matches || hasMatchingChildren;
-        })
-      : tree;
-
-    return filteredTree.map(category => {
+    return filteredCategories.map(category => {
       const isSelected = formData.categoryIds.includes(category.id);
-      const hasChildren = category.children && category.children.length > 0;
-      const hasSelectedChildren = hasChildren && category.children.some(child => 
-        formData.categoryIds.includes(child.id) || 
-        (child.children && child.children.some(grandchild => formData.categoryIds.includes(grandchild.id)))
-      );
 
       return (
         <div key={category.id} className="category-tree-node">
           <div 
-            className={`category-card ${isSelected ? 'selected' : ''} ${hasSelectedChildren ? 'has-selected-children' : ''} level-${category.level}`}
+            className={`category-card ${isSelected ? 'selected' : ''}`}
             onClick={() => handleCategoryToggle(category.id)}
           >
             <div className="category-card-content">
-              {hasChildren && (
-                <svg className="category-icon folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                </svg>
-              )}
-              {!hasChildren && (
-                <svg className="category-icon file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
-              )}
+              <svg className="category-icon file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
               <span className="category-card-name">{category.name}</span>
             </div>
             <div className={`category-checkbox-indicator ${isSelected ? 'checked' : ''}`}>
@@ -427,11 +347,6 @@ function ProductManagement() {
               )}
             </div>
           </div>
-          {hasChildren && (
-            <div className="category-children">
-              {renderCategoryTree(category.children, search)}
-            </div>
-          )}
         </div>
       );
     });
@@ -696,10 +611,10 @@ function ProductManagement() {
                       </div>
                     )}
                     <div className="category-tree-container">
-                      {categoryTreeHierarchical.length === 0 && (
+                      {categories.length === 0 && (
                         <p className="no-categories">No categories available</p>
                       )}
-                      {categoryTreeHierarchical.length > 0 && renderCategoryTree(categoryTreeHierarchical, categorySearch)}
+                      {categories.length > 0 && renderCategoryList(categorySearch)}
                     </div>
                   </div>
                 </div>
@@ -962,10 +877,10 @@ function ProductManagement() {
                       </div>
                     )}
                     <div className="category-tree-container">
-                      {categoryTreeHierarchical.length === 0 && (
+                      {categories.length === 0 && (
                         <p className="no-categories">No categories available</p>
                       )}
-                      {categoryTreeHierarchical.length > 0 && renderCategoryTree(categoryTreeHierarchical, categorySearch)}
+                      {categories.length > 0 && renderCategoryList(categorySearch)}
                     </div>
                   </div>
                 </div>

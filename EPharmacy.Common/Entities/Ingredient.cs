@@ -6,5 +6,5 @@ public class Ingredient : BaseEntity
     public string Description { get; set; } = string.Empty;
     public bool IsActiveSubstance { get; set; }
 
-    public ICollection<Product> Products { get; set; } = new List<Product>();
+    public ICollection<ProductIngredient> ProductIngredients { get; set; } = new List<ProductIngredient>();
 }

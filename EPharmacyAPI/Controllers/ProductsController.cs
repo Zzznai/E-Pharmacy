@@ -53,7 +53,7 @@ public class ProductsController : ControllerBase
             return BadRequest("Invalid ingredients format.");
         }
 
-        var brand = await _brandService.GetById(dto.BrandId);
+        var brand = await _brandService.GetById(dto.BrandId!.Value);
         if (brand == null)
         {
             return BadRequest("Brand not found.");
@@ -87,7 +87,7 @@ public class ProductsController : ControllerBase
             AvailableQuantity = dto.AvailableQuantity,
             Description = description,
             IsPrescriptionRequired = dto.IsPrescriptionRequired,
-            BrandId = dto.BrandId
+            BrandId = dto.BrandId!.Value
         };
 
         List<int> categoryIds;
@@ -127,7 +127,7 @@ public class ProductsController : ControllerBase
             return BadRequest("Invalid ingredients format.");
         }
 
-        var brand = await _brandService.GetById(dto.BrandId);
+        var brand = await _brandService.GetById(dto.BrandId!.Value);
         if (brand == null)
         {
             return BadRequest("Brand not found.");
@@ -159,7 +159,7 @@ public class ProductsController : ControllerBase
         product.AvailableQuantity = dto.AvailableQuantity;
         product.Description = updateDescription;
         product.IsPrescriptionRequired = dto.IsPrescriptionRequired;
-        product.BrandId = dto.BrandId;
+        product.BrandId = dto.BrandId!.Value;
 
         List<int> updateCategoryIds;
         if (dto.CategoryIds != null)
