@@ -1,6 +1,7 @@
 using FluentValidation;
 using EPharmacyAPI.Dtos.Orders;
 using EPharmacy.Common.Entities;
+using EPharmacy.Common.Enums;
 
 namespace EPharmacyAPI.Validators;
 

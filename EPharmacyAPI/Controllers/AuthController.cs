@@ -24,7 +24,7 @@ public class AuthController : ControllerBase
     [HttpPost("token")]
     public async Task<IActionResult> GetToken([FromBody] UserLoginDto dto)
     {
-        var user = await _userService.GetByUsernameAsync(dto.Username);
+        var user = await _userService.GetByUsername(dto.Username);
 
         if (user == null)
         {

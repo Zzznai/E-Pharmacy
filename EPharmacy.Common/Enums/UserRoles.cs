@@ -1,4 +1,4 @@
-namespace EPharmacy.Common.Entities;
+namespace EPharmacy.Common.Enums;
 
 public enum UserRoles
 {

@@ -23,7 +23,7 @@ public class BrandsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
-        var items = await _brandService.GetAllAsync();
+        var items = await _brandService.GetAll();
 
         return Ok(items.Select(b => new BrandResponse(b.Id, b.Name)));
     }
@@ -32,7 +32,7 @@ public class BrandsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetById(int id)
     {
-        var brand = await _brandService.GetByIdAsync(id);
+        var brand = await _brandService.GetById(id);
 
         if (brand == null)
         {
@@ -48,7 +48,7 @@ public class BrandsController : ControllerBase
     {
         var brand = new Brand { Name = dto.Name };
 
-        await _brandService.SaveAsync(brand);
+        await _brandService.Save(brand);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -61,7 +61,7 @@ public class BrandsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Put(int id, [FromBody] BrandUpdateDto dto)
     {
-        var brand = await _brandService.GetByIdAsync(id);
+        var brand = await _brandService.GetById(id);
 
         if (brand == null)
         {
@@ -70,7 +70,7 @@ public class BrandsController : ControllerBase
 
         brand.Name = dto.Name;
 
-        await _brandService.SaveAsync(brand);
+        await _brandService.Save(brand);
 
         return NoContent();
     }
@@ -79,14 +79,14 @@ public class BrandsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Delete(int id)
     {
-        var brand = await _brandService.GetByIdAsync(id);
+        var brand = await _brandService.GetById(id);
 
         if (brand == null)
         {
             return NotFound();
         }
 
-        await _brandService.DeleteAsync(brand);
+        await _brandService.Delete(brand);
 
         return NoContent();
     }

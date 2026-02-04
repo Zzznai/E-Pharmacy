@@ -38,12 +38,6 @@ public class ApplicationDbContext : DbContext
             .Property(i => i.Description)
             .HasColumnType("nvarchar(max)");
 
-        modelBuilder.Entity<Category>()
-            .HasOne(c => c.ParentCategory)
-            .WithMany(c => c.Subcategories)
-            .HasForeignKey(c => c.ParentCategoryId)
-            .OnDelete(DeleteBehavior.Restrict);
-
         modelBuilder.Entity<ProductIngredient>()
             .HasOne(pi => pi.Product)
             .WithMany(p => p.ProductIngredients)

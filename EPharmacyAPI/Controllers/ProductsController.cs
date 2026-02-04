@@ -23,7 +23,7 @@ public class ProductsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetAll([FromQuery] string? search, [FromQuery] int? categoryId)
     {
-        var products = await _productService.SearchAsync(search, categoryId);
+        var products = await _productService.Search(search, categoryId);
 
         return Ok(products.Select(MapToDto));
     }
@@ -32,7 +32,7 @@ public class ProductsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetById(int id)
     {
-        var product = await _productService.GetByIdAsync(id);
+        var product = await _productService.GetById(id);
 
         if (product == null)
         {
@@ -55,7 +55,7 @@ public class ProductsController : ControllerBase
 
         if (dto.BrandId.HasValue)
         {
-            var brand = await _brandService.GetByIdAsync(dto.BrandId.Value);
+            var brand = await _brandService.GetById(dto.BrandId.Value);
 
             if (brand == null)
             {
@@ -63,29 +63,52 @@ public class ProductsController : ControllerBase
             }
         }
 
+        string photoUrl;
+        if (dto.ImageUrl != null)
+        {
+            photoUrl = dto.ImageUrl;
+        }
+        else
+        {
+            photoUrl = "";
+        }
+
+        string description;
+        if (dto.Description != null)
+        {
+            description = dto.Description;
+        }
+        else
+        {
+            description = "";
+        }
+
         var product = new Product
         {
             Name = dto.Name,
-            PhotoUrl = dto.ImageUrl ?? "",
+            PhotoUrl = photoUrl,
             Price = dto.Price,
             AvailableQuantity = dto.AvailableQuantity,
-            Description = dto.Description ?? "",
+            Description = description,
             IsPrescriptionRequired = dto.IsPrescriptionRequired,
             BrandId = dto.BrandId
         };
 
-        var categoryIds = dto.CategoryIds ?? new List<int>();
-
-        var productIngredients = ingredientDtos.Select(i => new ProductIngredient
+        List<int> categoryIds;
+        if (dto.CategoryIds != null)
         {
-            IngredientId = i.IngredientId,
-            Amount = i.Amount,
-            Unit = i.Unit
-        }).ToList();
+            categoryIds = dto.CategoryIds;
+        }
+        else
+        {
+            categoryIds = new List<int>();
+        }
 
-        await _productService.SaveAsync(product, categoryIds.ToHashSet(), productIngredients);
+        var productIngredients = ingredientDtos.Select(i => new ProductIngredient { IngredientId = i.IngredientId, Amount = i.Amount, Unit = i.Unit }).ToList();
 
-        var saved = await _productService.GetByIdAsync(product.Id);
+        await _productService.Save(product, categoryIds.ToHashSet(), productIngredients);
+
+        var saved = await _productService.GetById(product.Id);
 
         return CreatedAtAction(nameof(GetById), new { id = product.Id }, MapToDto(saved!));
     }
@@ -94,7 +117,7 @@ public class ProductsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Update(int id, [FromBody] ProductUpdateFormDto dto)
     {
-        var product = await _productService.GetByIdAsync(id);
+        var product = await _productService.GetById(id);
 
         if (product == null)
         {
@@ -110,7 +133,7 @@ public class ProductsController : ControllerBase
 
         if (dto.BrandId.HasValue)
         {
-            var brand = await _brandService.GetByIdAsync(dto.BrandId.Value);
+            var brand = await _brandService.GetById(dto.BrandId.Value);
 
             if (brand == null)
             {
@@ -118,24 +141,47 @@ public class ProductsController : ControllerBase
             }
         }
 
+        string updatePhotoUrl;
+        if (dto.ImageUrl != null)
+        {
+            updatePhotoUrl = dto.ImageUrl;
+        }
+        else
+        {
+            updatePhotoUrl = "";
+        }
+
+        string updateDescription;
+        if (dto.Description != null)
+        {
+            updateDescription = dto.Description;
+        }
+        else
+        {
+            updateDescription = "";
+        }
+
         product.Name = dto.Name;
-        product.PhotoUrl = dto.ImageUrl ?? "";
+        product.PhotoUrl = updatePhotoUrl;
         product.Price = dto.Price;
         product.AvailableQuantity = dto.AvailableQuantity;
-        product.Description = dto.Description ?? "";
+        product.Description = updateDescription;
         product.IsPrescriptionRequired = dto.IsPrescriptionRequired;
         product.BrandId = dto.BrandId;
 
-        var categoryIds = dto.CategoryIds ?? new List<int>();
-
-        var productIngredients = ingredientDtos.Select(i => new ProductIngredient
+        List<int> updateCategoryIds;
+        if (dto.CategoryIds != null)
         {
-            IngredientId = i.IngredientId,
-            Amount = i.Amount,
-            Unit = i.Unit
-        }).ToList();
+            updateCategoryIds = dto.CategoryIds;
+        }
+        else
+        {
+            updateCategoryIds = new List<int>();
+        }
 
-        await _productService.SaveAsync(product, categoryIds.ToHashSet(), productIngredients);
+        var productIngredients = ingredientDtos.Select(i => new ProductIngredient { IngredientId = i.IngredientId, Amount = i.Amount, Unit = i.Unit }).ToList();
+
+        await _productService.Save(product, updateCategoryIds.ToHashSet(), productIngredients);
 
         return NoContent();
     }
@@ -144,14 +190,14 @@ public class ProductsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Delete(int id)
     {
-        var product = await _productService.GetByIdAsync(id);
+        var product = await _productService.GetById(id);
 
         if (product == null)
         {
             return NotFound();
         }
 
-        await _productService.DeleteAsync(product);
+        await _productService.Delete(product);
 
         return NoContent();
     }
@@ -160,7 +206,7 @@ public class ProductsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> SetQuantity(int id, [FromBody] int quantity)
     {
-        var product = await _productService.GetByIdAsync(id);
+        var product = await _productService.GetById(id);
 
         if (product == null)
         {
@@ -179,7 +225,7 @@ public class ProductsController : ControllerBase
 
         product.AvailableQuantity = quantity;
 
-        await _productService.SaveAsync(product);
+        await _productService.Save(product);
 
         return NoContent();
     }
@@ -187,42 +233,24 @@ public class ProductsController : ControllerBase
     private static ProductResponseDto MapToDto(Product p)
     {
         string? brandName = null;
-
         if (p.Brand != null)
         {
             brandName = p.Brand.Name;
         }
 
-        var ingredients = p.ProductIngredients.Select(pi =>
+        var ingredients = new List<IngredientLineResponseDto>();
+        foreach (var pi in p.ProductIngredients)
         {
             string ingredientName = "";
-
             if (pi.Ingredient != null)
             {
                 ingredientName = pi.Ingredient.Name;
             }
+            ingredients.Add(new IngredientLineResponseDto(pi.IngredientId, ingredientName, pi.Amount, pi.Unit));
+        }
 
-            return new IngredientLineResponseDto(
-                pi.IngredientId,
-                ingredientName,
-                pi.Amount,
-                pi.Unit
-            );
-        }).ToList();
-
-        return new ProductResponseDto(
-            p.Id,
-            p.Name,
-            p.PhotoUrl,
-            p.Price,
-            p.AvailableQuantity,
-            p.Description,
-            p.IsPrescriptionRequired,
-            p.BrandId,
-            brandName,
-            p.Categories.Select(c => c.Id).ToList(),
-            ingredients
-        );
+        var categoryIds = p.Categories.Select(c => c.Id).ToList();
+        return new ProductResponseDto(p.Id, p.Name, p.PhotoUrl, p.Price, p.AvailableQuantity, p.Description, p.IsPrescriptionRequired, p.BrandId, brandName, categoryIds, ingredients);
     }
 
     private static List<IngredientLineDto>? ParseIngredients(string? json)

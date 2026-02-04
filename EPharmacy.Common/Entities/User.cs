@@ -1,3 +1,5 @@
+using EPharmacy.Common.Enums;
+
 namespace EPharmacy.Common.Entities;
 
 public class User : BaseEntity

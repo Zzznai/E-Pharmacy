@@ -23,21 +23,16 @@ public class IngredientsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
-        var items = await _ingredientService.GetAllAsync();
-
-        return Ok(items.Select(i => new IngredientResponse(
-            i.Id,
-            i.Name,
-            i.Description,
-            i.IsActiveSubstance
-        )));
+        var items = await _ingredientService.GetAll();
+        var result = items.Select(i => new IngredientResponse(i.Id, i.Name, i.Description, i.IsActiveSubstance));
+        return Ok(result);
     }
 
     [HttpGet("{id}")]
     [AllowAnonymous]
     public async Task<IActionResult> GetById(int id)
     {
-        var ingredient = await _ingredientService.GetByIdAsync(id);
+        var ingredient = await _ingredientService.GetById(id);
 
         if (ingredient == null)
         {
@@ -63,7 +58,7 @@ public class IngredientsController : ControllerBase
             IsActiveSubstance = dto.IsActiveSubstance
         };
 
-        await _ingredientService.SaveAsync(ingredient);
+        await _ingredientService.Save(ingredient);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -76,7 +71,7 @@ public class IngredientsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Put(int id, [FromBody] IngredientUpdateDto dto)
     {
-        var ingredient = await _ingredientService.GetByIdAsync(id);
+        var ingredient = await _ingredientService.GetById(id);
 
         if (ingredient == null)
         {
@@ -87,7 +82,7 @@ public class IngredientsController : ControllerBase
         ingredient.Description = dto.Description;
         ingredient.IsActiveSubstance = dto.IsActiveSubstance;
 
-        await _ingredientService.SaveAsync(ingredient);
+        await _ingredientService.Save(ingredient);
 
         return NoContent();
     }
@@ -96,14 +91,14 @@ public class IngredientsController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Delete(int id)
     {
-        var ingredient = await _ingredientService.GetByIdAsync(id);
+        var ingredient = await _ingredientService.GetById(id);
 
         if (ingredient == null)
         {
             return NotFound();
         }
 
-        await _ingredientService.DeleteAsync(ingredient);
+        await _ingredientService.Delete(ingredient);
 
         return NoContent();
     }

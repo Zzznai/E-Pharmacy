@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using EPharmacy.Common.Entities;
+using EPharmacy.Common.Enums;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Users;
 using EPharmacyAPI.Services;
@@ -28,16 +29,8 @@ public class UserController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetAll()
     {
-        var users = await _userService.GetAllAsync();
-
-        var result = users.Select(u => new UserResponse(
-            u.Id,
-            u.Username,
-            u.FirstName,
-            u.LastName,
-            u.Role.ToString()
-        ));
-
+        var users = await _userService.GetAll();
+        var result = users.Select(u => new UserResponse(u.Id, u.Username, u.FirstName, u.LastName, u.Role.ToString()));
         return Ok(result);
     }
 
@@ -52,7 +45,7 @@ public class UserController : ControllerBase
             return Unauthorized();
         }
 
-        var user = await _userService.GetByIdAsync(userId.Value);
+        var user = await _userService.GetById(userId.Value);
 
         if (user == null)
         {
@@ -72,7 +65,7 @@ public class UserController : ControllerBase
     [Authorize]
     public async Task<IActionResult> GetById(int id)
     {
-        var user = await _userService.GetByIdAsync(id);
+        var user = await _userService.GetById(id);
 
         if (user == null)
         {
@@ -99,7 +92,7 @@ public class UserController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Create([FromBody] CreateUserDto dto)
     {
-        var existing = await _userService.GetByUsernameAsync(dto.Username);
+        var existing = await _userService.GetByUsername(dto.Username);
 
         if (existing != null)
         {
@@ -117,7 +110,7 @@ public class UserController : ControllerBase
         var hasher = new PasswordHasher<User>();
         user.PasswordHash = hasher.HashPassword(user, dto.Password);
 
-        await _userService.SaveAsync(user);
+        await _userService.Save(user);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -135,7 +128,7 @@ public class UserController : ControllerBase
             return Forbid();
         }
 
-        var existing = await _userService.GetByUsernameAsync(dto.Username);
+        var existing = await _userService.GetByUsername(dto.Username);
 
         if (existing != null)
         {
@@ -153,7 +146,7 @@ public class UserController : ControllerBase
         var hasher = new PasswordHasher<User>();
         user.PasswordHash = hasher.HashPassword(user, dto.Password);
 
-        await _userService.SaveAsync(user);
+        await _userService.Save(user);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -166,7 +159,7 @@ public class UserController : ControllerBase
     [Authorize]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDto dto)
     {
-        var user = await _userService.GetByIdAsync(id);
+        var user = await _userService.GetById(id);
 
         if (user == null)
         {
@@ -183,7 +176,7 @@ public class UserController : ControllerBase
         user.FirstName = dto.FirstName;
         user.LastName = dto.LastName;
 
-        await _userService.SaveAsync(user);
+        await _userService.Save(user);
 
         return NoContent();
     }
@@ -192,14 +185,14 @@ public class UserController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Delete(int id)
     {
-        var user = await _userService.GetByIdAsync(id);
+        var user = await _userService.GetById(id);
 
         if (user == null)
         {
             return NotFound();
         }
 
-        await _userService.DeleteAsync(user);
+        await _userService.Delete(user);
 
         return NoContent();
     }
@@ -208,7 +201,7 @@ public class UserController : ControllerBase
     [Authorize]
     public async Task<IActionResult> ChangePassword(int id, [FromBody] ChangePasswordDto dto)
     {
-        var user = await _userService.GetByIdAsync(id);
+        var user = await _userService.GetById(id);
 
         if (user == null)
         {
@@ -239,7 +232,7 @@ public class UserController : ControllerBase
 
         user.PasswordHash = hasher.HashPassword(user, dto.NewPassword);
 
-        await _userService.SaveAsync(user);
+        await _userService.Save(user);
 
         return NoContent();
     }

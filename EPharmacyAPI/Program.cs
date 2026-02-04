@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore;
 using EPharmacy.Common.Entities;
+using EPharmacy.Common.Enums;
 using EPharmacy.Common.Persistence;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Services;
@@ -83,9 +84,36 @@ builder.Services.AddScoped<BrandService>();
 
 // configure JWT
 var jwt = builder.Configuration.GetSection("Jwt");
-var keyValue = jwt["Key"] ?? throw new InvalidOperationException("Jwt:Key not configured");
-var issuer = jwt["Issuer"] ?? "epharmacy";
-var audience = jwt["Audience"] ?? "epharmacy_clients";
+
+string keyValue;
+if (jwt["Key"] != null)
+{
+    keyValue = jwt["Key"];
+}
+else
+{
+    throw new InvalidOperationException("Jwt:Key not configured");
+}
+
+string issuer;
+if (jwt["Issuer"] != null)
+{
+    issuer = jwt["Issuer"];
+}
+else
+{
+    issuer = "epharmacy";
+}
+
+string audience;
+if (jwt["Audience"] != null)
+{
+    audience = jwt["Audience"];
+}
+else
+{
+    audience = "epharmacy_clients";
+}
 
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyValue));
 
@@ -108,7 +136,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Swagger (choose one style; this is the typical one)
+// Swagger
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -122,7 +150,6 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Seed initial admin user (must be BEFORE app.Run())
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;

@@ -45,8 +45,7 @@ export const categoryService = {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        name: categoryData.name,
-        parentCategoryId: categoryData.parentCategoryId || null
+        name: categoryData.name
       })
     });
 
@@ -63,8 +62,7 @@ export const categoryService = {
       method: 'PUT',
       headers: getAuthHeaders(),
       body: JSON.stringify({
-        name: categoryData.name,
-        parentCategoryId: categoryData.parentCategoryId || null
+        name: categoryData.name
       })
     });
 

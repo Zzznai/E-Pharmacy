@@ -23,15 +23,8 @@ public class CategoriesController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
-        var items = await _categoryService.GetAllAsync();
-
-        var result = items.Select(c => new CategoryResponse(
-            c.Id,
-            c.Name,
-            c.ParentCategoryId,
-            c.Subcategories.Select(s => s.Id).ToList()
-        ));
-
+        var items = await _categoryService.GetAll();
+        var result = items.Select(c => new CategoryResponse(c.Id, c.Name));
         return Ok(result);
     }
 
@@ -39,47 +32,31 @@ public class CategoriesController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetById(int id)
     {
-        var category = await _categoryService.GetByIdAsync(id);
+        var category = await _categoryService.GetById(id);
 
         if (category == null)
         {
             return NotFound();
         }
 
-        return Ok(new CategoryResponse(
-            category.Id,
-            category.Name,
-            category.ParentCategoryId,
-            category.Subcategories.Select(s => s.Id).ToList()
-        ));
+        return Ok(new CategoryResponse(category.Id, category.Name));
     }
 
     [HttpPost]
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Post([FromBody] CategoryCreateDto dto)
     {
-        if (dto.ParentCategoryId.HasValue)
-        {
-            var parent = await _categoryService.GetByIdAsync(dto.ParentCategoryId.Value);
-
-            if (parent == null)
-            {
-                return BadRequest("Parent category not found.");
-            }
-        }
-
         var category = new Category
         {
-            Name = dto.Name,
-            ParentCategoryId = dto.ParentCategoryId
+            Name = dto.Name
         };
 
-        await _categoryService.SaveAsync(category);
+        await _categoryService.Save(category);
 
         return CreatedAtAction(
             nameof(GetById),
             new { id = category.Id },
-            new CategoryResponse(category.Id, category.Name, category.ParentCategoryId, new List<int>())
+            new CategoryResponse(category.Id, category.Name)
         );
     }
 
@@ -87,7 +64,7 @@ public class CategoriesController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Put(int id, [FromBody] CategoryUpdateDto dto)
     {
-        var category = await _categoryService.GetByIdAsync(id);
+        var category = await _categoryService.GetById(id);
 
         if (category == null)
         {
@@ -95,9 +72,8 @@ public class CategoriesController : ControllerBase
         }
 
         category.Name = dto.Name;
-        category.ParentCategoryId = dto.ParentCategoryId;
 
-        await _categoryService.SaveAsync(category);
+        await _categoryService.Save(category);
 
         return NoContent();
     }
@@ -106,14 +82,14 @@ public class CategoriesController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Delete(int id)
     {
-        var category = await _categoryService.GetByIdAsync(id);
+        var category = await _categoryService.GetById(id);
 
         if (category == null)
         {
             return NotFound();
         }
 
-        await _categoryService.DeleteAsync(category);
+        await _categoryService.Delete(category);
 
         return NoContent();
     }

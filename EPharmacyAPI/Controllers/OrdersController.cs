@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using EPharmacy.Common.Entities;
+using EPharmacy.Common.Enums;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Orders;
 using Microsoft.AspNetCore.Authorization;
@@ -24,21 +25,17 @@ public class OrdersController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetTopProducts([FromQuery] int count = 5)
     {
-        var orders = await _orderService.GetAllAsync();
+        var orders = await _orderService.GetAll();
 
-        var topProducts = orders
-            .SelectMany(o => o.OrderItems)
-            .Where(oi => oi.Product != null)
-            .GroupBy(oi => new { oi.ProductId, oi.Product!.Name })
-            .Select(g => new
-            {
-                g.Key.ProductId,
-                ProductName = g.Key.Name,
-                TotalQuantity = g.Sum(x => x.Quantity),
-                TotalRevenue = g.Sum(x => x.Quantity * x.UnitPrice)
-            })
-            .OrderByDescending(x => x.TotalQuantity)
-            .Take(count);
+        var orderItems = orders.SelectMany(o => o.OrderItems).Where(oi => oi.Product != null);
+        var grouped = orderItems.GroupBy(oi => new { oi.ProductId, oi.Product!.Name });
+        var topProducts = grouped.Select(g => new
+        {
+            g.Key.ProductId,
+            ProductName = g.Key.Name,
+            TotalQuantity = g.Sum(x => x.Quantity),
+            TotalRevenue = g.Sum(x => x.Quantity * x.UnitPrice)
+        }).OrderByDescending(x => x.TotalQuantity).Take(count);
 
         return Ok(topProducts);
     }
@@ -47,9 +44,10 @@ public class OrdersController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> GetAll()
     {
-        var orders = await _orderService.GetAllAsync();
-
-        return Ok(orders.OrderByDescending(o => o.OrderDate).Select(MapToListDto));
+        var orders = await _orderService.GetAll();
+        var sorted = orders.OrderByDescending(o => o.OrderDate);
+        var result = sorted.Select(MapToListDto);
+        return Ok(result);
     }
 
     [HttpGet("my-orders")]
@@ -63,16 +61,16 @@ public class OrdersController : ControllerBase
             return Unauthorized();
         }
 
-        var orders = await _orderService.GetByUserIdAsync(userId.Value);
-
-        return Ok(orders.Select(MapToListDto));
+        var orders = await _orderService.GetByUserId(userId.Value);
+        var result = orders.Select(MapToListDto);
+        return Ok(result);
     }
 
     [HttpGet("{id}")]
     [Authorize]
     public async Task<IActionResult> GetById(int id)
     {
-        var order = await _orderService.GetByIdAsync(id);
+        var order = await _orderService.GetById(id);
 
         if (order == null)
         {
@@ -137,7 +135,7 @@ public class OrdersController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateOrderStatusDto dto)
     {
-        var order = await _orderService.GetByIdAsync(id);
+        var order = await _orderService.GetById(id);
 
         if (order == null)
         {
@@ -162,7 +160,7 @@ public class OrdersController : ControllerBase
 
         order.Status = newStatus;
 
-        await _orderService.SaveAsync(order);
+        await _orderService.Save(order);
 
         return Ok(new { message = "Order status updated", status = order.Status.ToString() });
     }
@@ -171,14 +169,14 @@ public class OrdersController : ControllerBase
     [Authorize(Roles = "Administrator")]
     public async Task<IActionResult> Delete(int id)
     {
-        var order = await _orderService.GetByIdAsync(id);
+        var order = await _orderService.GetById(id);
 
         if (order == null)
         {
             return NotFound();
         }
 
-        await _orderService.DeleteAsync(order);
+        await _orderService.Delete(order);
 
         return NoContent();
     }
@@ -204,7 +202,7 @@ public class OrdersController : ControllerBase
 
         foreach (var item in dto.Items)
         {
-            var product = await _productService.GetByIdAsync(item.ProductId);
+            var product = await _productService.GetById(item.ProductId);
 
             if (product == null)
             {
@@ -231,7 +229,57 @@ public class OrdersController : ControllerBase
             total += product.Price * item.Quantity;
             product.AvailableQuantity -= item.Quantity;
 
-            await _productService.SaveAsync(product);
+            await _productService.Save(product);
+        }
+
+        string deliveryAddress;
+        if (dto.DeliveryAddress != null)
+        {
+            deliveryAddress = dto.DeliveryAddress;
+        }
+        else
+        {
+            deliveryAddress = "";
+        }
+
+        string city;
+        if (dto.City != null)
+        {
+            city = dto.City;
+        }
+        else
+        {
+            city = "";
+        }
+
+        string province;
+        if (dto.Province != null)
+        {
+            province = dto.Province;
+        }
+        else
+        {
+            province = "";
+        }
+
+        string postalCode;
+        if (dto.PostalCode != null)
+        {
+            postalCode = dto.PostalCode;
+        }
+        else
+        {
+            postalCode = "";
+        }
+
+        string phoneNumber;
+        if (dto.PhoneNumber != null)
+        {
+            phoneNumber = dto.PhoneNumber;
+        }
+        else
+        {
+            phoneNumber = "";
         }
 
         var order = new Order
@@ -240,15 +288,15 @@ public class OrdersController : ControllerBase
             OrderDate = DateTime.UtcNow,
             Status = OrderStatus.Pending,
             TotalPrice = total,
-            DeliveryAddress = dto.DeliveryAddress ?? "",
-            City = dto.City ?? "",
-            Province = dto.Province ?? "",
-            PostalCode = dto.PostalCode ?? "",
-            PhoneNumber = dto.PhoneNumber ?? "",
+            DeliveryAddress = deliveryAddress,
+            City = city,
+            Province = province,
+            PostalCode = postalCode,
+            PhoneNumber = phoneNumber,
             OrderItems = orderItems
         };
 
-        await _orderService.SaveAsync(order);
+        await _orderService.Save(order);
 
         return Ok(new OrderResponseDto(order.Id, order.TotalPrice, order.Status.ToString()));
     }
