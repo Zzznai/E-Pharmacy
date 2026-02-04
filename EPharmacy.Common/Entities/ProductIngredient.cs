@@ -6,6 +6,6 @@ public class ProductIngredient : BaseEntity
     public decimal Amount { get; set; }
     public string Unit { get; set; } = string.Empty;
 
-    public Product? Product { get; set; }
-    public Ingredient? Ingredient { get; set; }
+    public Product Product { get; set; } = null!;
+    public Ingredient Ingredient { get; set; } = null!;
 }

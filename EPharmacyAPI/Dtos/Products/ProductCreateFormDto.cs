@@ -7,7 +7,7 @@ public class ProductCreateFormDto
     public int AvailableQuantity { get; set; }
     public string Description { get; set; } = string.Empty;
     public bool IsPrescriptionRequired { get; set; }
-    public int? BrandId { get; set; }
+    public int BrandId { get; set; }
     public List<int>? CategoryIds { get; set; }
     public string? IngredientsJson { get; set; }
     public string? ImageUrl { get; set; }

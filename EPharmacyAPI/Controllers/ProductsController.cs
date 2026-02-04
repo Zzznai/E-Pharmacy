@@ -53,14 +53,10 @@ public class ProductsController : ControllerBase
             return BadRequest("Invalid ingredients format.");
         }
 
-        if (dto.BrandId.HasValue)
+        var brand = await _brandService.GetById(dto.BrandId);
+        if (brand == null)
         {
-            var brand = await _brandService.GetById(dto.BrandId.Value);
-
-            if (brand == null)
-            {
-                return BadRequest("Brand not found.");
-            }
+            return BadRequest("Brand not found.");
         }
 
         string photoUrl;
@@ -131,14 +127,10 @@ public class ProductsController : ControllerBase
             return BadRequest("Invalid ingredients format.");
         }
 
-        if (dto.BrandId.HasValue)
+        var brand = await _brandService.GetById(dto.BrandId);
+        if (brand == null)
         {
-            var brand = await _brandService.GetById(dto.BrandId.Value);
-
-            if (brand == null)
-            {
-                return BadRequest("Brand not found.");
-            }
+            return BadRequest("Brand not found.");
         }
 
         string updatePhotoUrl;
