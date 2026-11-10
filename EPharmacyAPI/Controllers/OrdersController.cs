@@ -1,10 +1,12 @@
-using System.Security.Claims;
 using EPharmacy.Common.Entities;
 using EPharmacy.Common.Enums;
+using EPharmacy.Common.Persistence;
 using EPharmacy.Common.Services;
 using EPharmacyAPI.Dtos.Orders;
+using EPharmacyAPI.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace EPharmacyAPI.Controllers;
 
@@ -14,11 +16,13 @@ public class OrdersController : ControllerBase
 {
     private readonly OrderService _orderService;
     private readonly ProductService _productService;
+    private readonly ApplicationDbContext _db;
 
-    public OrdersController(OrderService orderService, ProductService productService)
+    public OrdersController(OrderService orderService, ProductService productService, ApplicationDbContext db)
     {
         _orderService = orderService;
         _productService = productService;
+        _db = db;
     }
 
     [HttpGet("top-products")]
@@ -198,6 +202,7 @@ public class OrdersController : ControllerBase
         }
 
         var orderItems = new List<OrderItem>();
+        var productsToUpdate = new List<Product>();
         decimal total = 0;
 
         foreach (var item in dto.Items)
@@ -228,59 +233,14 @@ public class OrdersController : ControllerBase
 
             total += product.Price * item.Quantity;
             product.AvailableQuantity -= item.Quantity;
-
-            await _productService.Save(product);
+            productsToUpdate.Add(product);
         }
 
-        string deliveryAddress;
-        if (dto.DeliveryAddress != null)
-        {
-            deliveryAddress = dto.DeliveryAddress;
-        }
-        else
-        {
-            deliveryAddress = "";
-        }
-
-        string city;
-        if (dto.City != null)
-        {
-            city = dto.City;
-        }
-        else
-        {
-            city = "";
-        }
-
-        string province;
-        if (dto.Province != null)
-        {
-            province = dto.Province;
-        }
-        else
-        {
-            province = "";
-        }
-
-        string postalCode;
-        if (dto.PostalCode != null)
-        {
-            postalCode = dto.PostalCode;
-        }
-        else
-        {
-            postalCode = "";
-        }
-
-        string phoneNumber;
-        if (dto.PhoneNumber != null)
-        {
-            phoneNumber = dto.PhoneNumber;
-        }
-        else
-        {
-            phoneNumber = "";
-        }
+        string deliveryAddress = dto.DeliveryAddress ?? string.Empty;
+        string city = dto.City ?? string.Empty;
+        string province = dto.Province ?? string.Empty;
+        string postalCode = dto.PostalCode ?? string.Empty;
+        string phoneNumber = dto.PhoneNumber ?? string.Empty;
 
         var order = new Order
         {
@@ -296,7 +256,24 @@ public class OrdersController : ControllerBase
             OrderItems = orderItems
         };
 
-        await _orderService.Save(order);
+        using var transaction = await _db.Database.BeginTransactionAsync();
+
+        try
+        {
+            await _orderService.Save(order);
+
+            foreach (var product in productsToUpdate)
+            {
+                await _productService.Save(product);
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
 
         return Ok(new OrderResponseDto(order.Id, order.TotalPrice, order.Status.ToString()));
     }
